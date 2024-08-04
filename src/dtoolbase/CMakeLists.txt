@@ -1,7 +1,6 @@
 set(DTOOLBASE_HEADERS
   dtoolbase.h dtoolbase_cc.h dtoolsymbols.h
   indent.I indent.h
-  nearly_zero.h
   pdtoa.h
   pstrtod.h
 )
