@@ -203,17 +203,68 @@ show_nested_types(const string &str) {
   }
 }
 
+bool
+test_declaration(CPPDeclaration *decl) {
+  if (decl->_leading_comment == nullptr) {
+    return true;
+  }
+
+  std::string &comment = decl->_leading_comment->_comment;
+  size_t start = 0;
+  while (start < comment.size() && (isspace(comment[start]) || comment[start] == '/' || comment[start] == '*')) {
+    ++start;
+  }
+  if (comment.compare(start, 6, "CHECK:") != 0) {
+    return true;
+  }
+  start += 6;
+  while (start < comment.size() && isspace(comment[start])) {
+    ++start;
+  }
+
+  // Strip */ at the end
+  size_t end = comment.size();
+  if (end > start && comment[end - 1] == '/') {
+    --end;
+  }
+  while (end > start && comment[end - 1] == '*') {
+    --end;
+  }
+  while (end > start && isspace(comment[end - 1])) {
+    --end;
+  }
+
+  std::string expected = comment.substr(start, end - start);
+
+  std::ostringstream buf;
+  decl->output(buf, 0, &parser, true);
+  std::string actual = buf.str();
+
+  int line = decl->_leading_comment->_line_number;
+  if (expected == actual) {
+    std::cerr << "\033[1;32mPASS\033[0m (line " << line << "): " << buf.str() << "\n";
+    return true;
+  } else {
+    std::cerr << "\033[1;31mFAIL\033[0m (line " << line << "):\n";
+    std::cerr << "expect: " << expected << "\n";
+    std::cerr << "actual: " << actual << "\n";
+    std::cerr << std::endl;
+    return false;
+  }
+}
+
 
 int
 main(int argc, char **argv) {
   extern char *optarg;
   extern int optind;
-  const char *optstr = "I:S:D:o:l:vpE";
+  const char *optstr = "I:S:D:o:l:vpET";
   preprocess_argv(argc, argv);
 
   parser.set_verbose(2);
   bool prompt = false;
   bool preprocess = false;
+  bool test = false;
 
   int flag = getopt(argc, argv, optstr);
 
@@ -254,6 +305,10 @@ main(int argc, char **argv) {
       preprocess = true;
       break;
 
+    case 'T':
+      test = true;
+      break;
+
     default:
       exit(1);
     }
@@ -274,6 +329,7 @@ main(int argc, char **argv) {
          << "  -o output_file (ignored)\n"
          << "  -v             (increase verbosity)\n"
          << "  -E             (output preprocessed token stream)\n"
+         << "  -T             (unit test mode)\n"
          << "  -p             (prompt for expression instead of dumping output)\n";
 
     exit(1);
@@ -321,6 +377,17 @@ main(int argc, char **argv) {
         }
       }
     }
+  } else if (test) {
+    // All declarations that have a leading comment of the form:
+    // CHECK: some expression;
+    // should parse to be equal to that expression.
+    bool all_pass = true;
+    for (CPPDeclaration *decl : parser._declarations) {
+      if (!test_declaration(decl)) {
+        all_pass = false;
+      }
+    }
+    return all_pass ? 0 : 1;
   } else {
     parser.write(cout, 0, &parser);
     cout << "\n";

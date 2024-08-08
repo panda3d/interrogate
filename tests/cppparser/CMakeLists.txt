@@ -1,0 +1,10 @@
+function(parse_test file)
+  get_filename_component(name ${file} NAME_WE)
+  set(extra_args)
+  if(file MATCHES "[.][ch](pp|xx)$")
+    set(extra_args -D__cplusplus)
+  endif()
+  add_test(NAME ${name} COMMAND parse_file -T ${extra_args} "-S${PROJECT_SOURCE_DIR}/parser-inc" "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+endfunction()
+
+parse_test(recursive_macros.c)

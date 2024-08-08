@@ -60,8 +60,6 @@ else()
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${_configs})
 endif()
 
-#enable_testing()
-
 string(REPLACE "$(EFFECTIVE_PLATFORM_NAME)" "" PANDA_CFG_INTDIR "${CMAKE_CFG_INTDIR}")
 
 # Add generic modules to cmake module path,
@@ -87,5 +85,10 @@ include(AddBisonTarget)     # Defines add_bison_target function
 include(AddFlexTarget)      # Defines add_flex_target function
 include(CompositeSources)   # Defines composite_sources function
 include(Python)             # Defines add_python_target
+include(CTest)
 
 add_subdirectory(src "${CMAKE_BINARY_DIR}/src")
+
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()

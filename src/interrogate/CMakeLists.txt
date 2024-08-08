@@ -62,6 +62,10 @@ composite_sources(interrogate INTERROGATE_SOURCES)
 add_executable(interrogate ${INTERROGATE_HEADERS} ${INTERROGATE_SOURCES})
 target_link_libraries(interrogate cppParser interrogatedb)
 
+# parse_file utility
+add_executable(parse_file parse_file.cxx)
+target_link_libraries(parse_file cppParser)
+
 # Python preamble for interrogate_module
 set(_preamble_files)
 foreach(_file ${INTERROGATE_PREAMBLE_PYTHON_NATIVE})
