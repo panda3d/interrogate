@@ -17,8 +17,9 @@
 // This file defines some convenience functions for reading and writing the
 // interrogate database files.
 
-#include "dtoolbase.h"
 #include <vector>
+#include <istream>
+#include <ostream>
 
 void idf_output_string(std::ostream &out, const std::string &str, char whitespace = ' ');
 void idf_input_string(std::istream &in, std::string &str);

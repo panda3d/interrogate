@@ -73,9 +73,6 @@ foreach(var
 
 endforeach(var)
 
-# dSearchPath.cxx:
-target_compile_definitions(dtoolutil PRIVATE "DEFAULT_PATHSEP=\"${DEFAULT_PATHSEP}\"")
-
 # Public definitions for getopt.
 foreach(var
     HAVE_GETOPT

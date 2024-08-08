@@ -594,9 +594,8 @@ operator < (const std::string &other) const {
  */
 INLINE int Filename::
 compare_to(const Filename &other) const {
-  return strcmp(_filename.c_str(), other._filename.c_str());
+  return _filename.compare(other._filename);
 }
-
 
 /**
  * Returns true if the Filename is valid (not empty), or false if it is an

@@ -17,6 +17,7 @@
 //#include "dtoolbase.h"
 
 #include <vector>
+#include <string>
 
 class CPPExpression;
 class CPPIdentifier;

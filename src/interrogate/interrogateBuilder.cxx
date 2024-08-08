@@ -49,6 +49,7 @@
 
 #include <ctype.h>
 #include <algorithm>
+#include <cstring>
 
 using std::cerr;
 using std::istream;
@@ -564,7 +565,7 @@ write_code(ostream &out_code,ostream * out_include, InterrogateModuleDef *def) {
 InterrogateModuleDef *InterrogateBuilder::
 make_module_def(int file_identifier) {
   InterrogateModuleDef *def = new InterrogateModuleDef;
-  memset(def, 0, sizeof(InterrogateModuleDef));
+  std::memset(def, 0, sizeof(InterrogateModuleDef));
 
   def->file_identifier = file_identifier;
   def->library_name = library_name.c_str();

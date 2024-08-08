@@ -30,6 +30,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef _MSC_VER
+#include <malloc.h>
+#endif
+
 #ifdef PHAVE_GLOB_H
   #include <glob.h>
   #ifndef GLOB_NOMATCH
@@ -144,7 +148,7 @@ get_panda_root() {
     char *envvar = nullptr;
     size_t size = 0;
     while (getenv_s(&size, envvar, size, "PANDA_ROOT") == ERANGE) {
-      envvar = (char *)alloca(size);
+      envvar = (char *)_alloca(size);
     }
     if (size != 0) {
       (*panda_root) = front_to_back_slash(envvar);

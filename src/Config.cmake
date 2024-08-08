@@ -26,26 +26,6 @@ option(BUILD_SHARED_LIBS
 Utilities/tools/binaries/etc are then dynamically linked to the
 libraries instead of being statically linked." ${_default_shared})
 
-# The character used to separate components of an OS-specific
-# directory name depends on the platform (it is '/' on Unix, '\' on
-# Windows).  That character selection is hardcoded into Panda and
-# cannot be changed here.  (Note that an internal Panda filename
-# always uses the forward slash, '/', to separate the components of a
-# directory name.)
-
-# There's a different character used to separate the complete
-# directory names in a search path specification.  On Unix, the
-# normal convention is ':', on Windows, it has to be ';', because the
-# colon is already used to mark the drive letter.  This character is
-# selectable here.  Most users won't want to change this.  If
-# multiple characters are placed in this string, any one of them may
-# be used as a separator character.
-if(WIN32)
-  set(DEFAULT_PATHSEP ";")
-else()
-  set(DEFAULT_PATHSEP ":")
-endif()
-
 
 # The following options relate to interrogate, the tool that is
 # used to generate bindings for non-C++ languages.

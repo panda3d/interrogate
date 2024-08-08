@@ -70,6 +70,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ma
 # intermediate configuration directory.
 set_property(GLOBAL PROPERTY XCODE_EMIT_EFFECTIVE_PLATFORM_NAME OFF)
 
+# Build all static libraries with -fPIC.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Include modules builtin to CMake
 include(GNUInstallDirs)     # Defines CMAKE_INSTALL_<dir> variables
 

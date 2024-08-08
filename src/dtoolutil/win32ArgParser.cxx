@@ -147,7 +147,7 @@ do_glob() {
   // means to do it.
   std::string envvar(128, '\0');
   size_t size = envvar.size();
-  while (getenv_s(&size, &envvar[0], size, var.c_str()) == ERANGE) {
+  while (getenv_s(&size, &envvar[0], size, "PANDA_GLOB") == ERANGE) {
     envvar.resize(size);
   }
   if (size > 1) {

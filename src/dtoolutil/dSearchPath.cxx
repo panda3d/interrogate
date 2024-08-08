@@ -17,6 +17,12 @@
 #include <algorithm>
 #include <iterator>
 
+#ifdef _WIN32
+#define DEFAULT_PATHSEP ";"
+#else
+#define DEFAULT_PATHSEP ":"
+#endif
+
 using std::ostream;
 using std::string;
 

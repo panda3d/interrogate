@@ -18,6 +18,9 @@
 #include "unicodeLatinMap.h"
 
 #include <ctype.h>
+#include <istream>
+#include <ostream>
+#include <string>
 
 class StringDecoder;
 

@@ -25,6 +25,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <ostream>
 
 class CPPInstance;
 class CPPTemplateParameterList;

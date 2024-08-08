@@ -13,6 +13,8 @@
 
 #include "interrogate_datafile.h"
 
+#include <cstring>
+
 using std::istream;
 using std::ostream;
 using std::string;
@@ -60,7 +62,7 @@ idf_output_string(ostream &out, const char *str, char whitespace) {
   if (str == nullptr) {
     out << "0 ";
   } else {
-    out << strlen(str) << whitespace;
+    out << std::strlen(str) << whitespace;
     if (str[0] != '\0') {
       out << str << whitespace;
     }

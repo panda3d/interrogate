@@ -313,10 +313,10 @@ extract_args(vector_string &args, const string &expr, size_t &p) const {
     }
   }
 
-  if ((int)args.size() < _num_parameters) {
+  if (args.size() < _num_parameters) {
     _parser.warning("Not enough arguments for manifest " + _name);
   }
-  else if (_variadic_param < 0 && (int)args.size() > _num_parameters) {
+  else if (_variadic_param < 0 && args.size() > _num_parameters) {
     _parser.warning("Too many arguments for manifest " + _name);
   }
 }
