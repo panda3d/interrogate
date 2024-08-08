@@ -22,16 +22,19 @@ function(add_python_target target)
     return()
   endif()
 
-  string(REGEX REPLACE "^.*\\." "" basename "${target}")
   set(sources)
-  set(component "Python")
-  set(export "Python")
+  set(component "python_modules")
+  set(export "python_modules")
+  set(module_name "${target}")
   foreach(arg ${ARGN})
     if(arg STREQUAL "COMPONENT")
       set(keyword "component")
 
     elseif(arg STREQUAL "EXPORT")
       set(keyword "export")
+
+    elseif(arg STREQUAL "MODULE_NAME")
+      set(keyword "module_name")
 
     elseif(keyword)
       set(${keyword} "${arg}")
@@ -43,7 +46,8 @@ function(add_python_target target)
     endif()
   endforeach(arg)
 
-  string(REGEX REPLACE "\\.[^.]+$" "" namespace "${target}")
+  string(REGEX REPLACE "^.*\\." "" basename "${module_name}")
+  string(REGEX REPLACE "\\.[^.]+$" "" namespace "${module_name}")
   string(REPLACE "." "/" slash_namespace "${namespace}")
 
   if(CMAKE_VERSION VERSION_LESS "3.26")
@@ -57,7 +61,7 @@ function(add_python_target target)
     endif()
   endif()
 
-  if(BUILD_SHARED_LIBS)
+  if(NOT MODULE_TYPE STREQUAL "STATIC")
     set(_outdir "${PANDA_OUTPUT_DIR}/${slash_namespace}")
 
     set_target_properties(${target} PROPERTIES

@@ -36,7 +36,7 @@ if(BUILD_SHARED_LIBS)
 
 else()
   set(LINK_ALL_STATIC ON)
-  set(MODULE_TYPE "STATIC"
+  set(MODULE_TYPE "MODULE"
     CACHE INTERNAL "" FORCE)
 
 endif()

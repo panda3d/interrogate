@@ -1,0 +1,39 @@
+[build-system]
+requires = [
+    "scikit-build-core>=0.9",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "panda3d-interrogate"
+version = "0.0.1"
+description = "Binding generator designed for Panda3D"
+readme = "README.md"
+requires-python = ">=3.2"
+license = { "file" = "LICENSE" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: C++",
+]
+
+[project.urls]
+Source = "https://github.com/panda3d/interrogate"
+Tracker = "https://github.com/panda3d/interrogate/issues"
+Funding = "https://opencollective.com/panda3d"
+
+[project.scripts]
+interrogate = "interrogate:main"
+interrogate_module = "interrogate_module:main"
+
+[tool.scikit-build]
+cmake.version = ">=3.13"
+cmake.args = ["-DBUILD_SHARED_LIBS=OFF", "-DHAVE_PYTHON=ON", "-DPYTHON_ARCH_INSTALL_DIR=."]
+wheel.py-api = "cp32"
+install.components = ["tools", "python_modules"]
+
+[tool.scikit-build.wheel.packages]
+interrogate = "python/interrogate"
+interrogate_module = "python/interrogate_module"

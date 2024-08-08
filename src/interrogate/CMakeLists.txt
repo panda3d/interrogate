@@ -119,5 +119,10 @@ else()
 
 endif()
 
-install(TARGETS interrogate interrogate_module DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES ${INTERROGATE_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/panda3d)
+if(SKBUILD)
+  install(TARGETS interrogate COMPONENT tools DESTINATION interrogate)
+  install(TARGETS interrogate_module COMPONENT tools DESTINATION interrogate_module)
+else()
+  install(TARGETS interrogate interrogate_module COMPONENT tools DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(FILES ${INTERROGATE_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/panda3d)
+endif()

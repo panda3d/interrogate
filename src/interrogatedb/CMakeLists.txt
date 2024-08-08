@@ -59,7 +59,7 @@ add_custom_command(
   COMMAND host_interrogate
     -D EXPCL_INTERROGATEDB=
     -nodb -python -promiscuous
-    -module panda3d.interrogatedb
+    -module interrogatedb
     -library interrogatedb
     -string -true-names -do-module
     -srcdir "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -69,6 +69,7 @@ add_custom_command(
   DEPENDS host_interrogate ${INTERROGATEDB_IGATE}
   COMMENT "Interrogating interrogatedb")
 
-add_python_target(panda3d.interrogatedb
+add_python_target(interrogatedb_module
+  MODULE_NAME interrogatedb
   "${CMAKE_CURRENT_BINARY_DIR}/interrogatedb_module.cxx")
-target_link_libraries(panda3d.interrogatedb PRIVATE interrogatedb)
+target_link_libraries(interrogatedb_module PRIVATE interrogatedb)
