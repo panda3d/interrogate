@@ -15,7 +15,6 @@
 
 #ifdef _WIN32
 
-#include "memoryBase.h"
 #include "textEncoder.h"
 #include "globPattern.h"
 #include "filename.h"
