@@ -18,6 +18,8 @@
 
 #include <sys/stat.h>
 #include <algorithm>
+#include <stdlib.h>
+#include <limits.h>
 
 #ifdef PHAVE_UTIME_H
 #include <utime.h>

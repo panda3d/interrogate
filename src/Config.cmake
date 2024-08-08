@@ -70,10 +70,10 @@ endif()
 
 get_directory_property(_old_cache_vars CACHE_VARIABLES)
 if(CMAKE_VERSION VERSION_LESS "3.26")
-  find_package(Python ${WANT_PYTHON_VERSION} QUIET COMPONENTS Interpreter Development)
+  find_package(Python ${WANT_PYTHON_VERSION} QUIET COMPONENTS Interpreter Development.Module)
   set(_IMPORTED_AS Python::Module)
 else()
-  find_package(Python ${WANT_PYTHON_VERSION} QUIET COMPONENTS Interpreter Development Development.SABIModule)
+  find_package(Python ${WANT_PYTHON_VERSION} QUIET COMPONENTS Interpreter Development.Module Development.SABIModule)
   set(_IMPORTED_AS Python::SABIModule)
 endif()
 

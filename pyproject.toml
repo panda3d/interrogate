@@ -31,9 +31,27 @@ interrogate_module = "interrogate_module:main"
 [tool.scikit-build]
 cmake.version = ">=3.13"
 cmake.args = ["-DBUILD_SHARED_LIBS=OFF", "-DHAVE_PYTHON=ON", "-DPYTHON_ARCH_INSTALL_DIR=."]
-wheel.py-api = "cp32"
+wheel.py-api = "cp33"
 install.components = ["tools", "python_modules"]
 
 [tool.scikit-build.wheel.packages]
 interrogate = "python/interrogate"
 interrogate_module = "python/interrogate_module"
+
+[tool.cibuildwheel]
+build = "cp38-*"
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = [
+  "auditwheel repair -w {dest_dir} {wheel}",
+  "pipx run abi3audit --strict --report {wheel}",
+]
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = [
+  "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}",
+  "pipx run abi3audit --strict --report {wheel}",
+]
+
+[tool.cibuildwheel.windows]
+repair-wheel-command = "pipx run abi3audit --strict --report {wheel}"
