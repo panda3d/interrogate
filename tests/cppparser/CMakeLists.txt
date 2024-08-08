@@ -8,3 +8,4 @@ function(parse_test file)
 endfunction()
 
 parse_test(recursive_macros.c)
+parse_test(stat.c)
