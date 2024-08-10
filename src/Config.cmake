@@ -162,18 +162,14 @@ if(HAVE_PYTHON)
 
   endif()
 
-  set(_EXT_SUFFIX ".${Python_SOSABI}.so")
-
-  if(NOT _EXT_SUFFIX)
-    if(CYGWIN)
-      set(_EXT_SUFFIX ".dll")
-    elseif(WIN32)
-      set(_EXT_SUFFIX ".pyd")
-    elseif(Python_SOSABI)
-      set(_EXT_SUFFIX ".${Python_SOSABI}.so")
-    else()
-      set(_EXT_SUFFIX ".abi3.so")
-    endif()
+  if(CYGWIN)
+    set(_EXT_SUFFIX ".dll")
+  elseif(WIN32)
+    set(_EXT_SUFFIX ".pyd")
+  elseif(Python_SOSABI)
+    set(_EXT_SUFFIX ".${Python_SOSABI}.so")
+  else()
+    set(_EXT_SUFFIX ".abi3.so")
   endif()
 
   set(PYTHON_LIB_INSTALL_DIR "${_LIB_DIR}" CACHE STRING
