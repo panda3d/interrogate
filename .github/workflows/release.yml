@@ -1,6 +1,9 @@
-name: Upload Python Package
+name: Build Python wheels
 
 on:
+  push:
+    branches:
+      - main
   release:
     types: [published]
 
@@ -8,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  build_wheels:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -27,12 +30,44 @@ jobs:
         python -m pip install --upgrade pip
         pip install build cibuildwheel==2.20.0
 
-    - name: Build package
+    - name: Build wheels
       run: python -m cibuildwheel
 
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@ec4db0b4ddc65acdf4bff5fa45ac92d78b56bdf0
+    - uses: actions/upload-artifact@v4
+      with:
+        name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+        path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build sdist
+      run: pipx run build --sdist
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: cibw-sdist
+        path: dist/*.tar.gz
+
+  upload_pypi:
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: cibw-*
+        path: dist
+        merge-multiple: true
+
+    - uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
-        packages_dir: ./wheelhouse/
