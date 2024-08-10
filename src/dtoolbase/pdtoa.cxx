@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
+#include <cmath>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
