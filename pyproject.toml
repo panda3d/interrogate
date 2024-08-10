@@ -6,7 +6,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "panda3d-interrogate"
-version = "0.0.1"
+version = "0.1.0"
 description = "Binding generator designed for Panda3D"
 readme = "README.md"
 requires-python = ">=3.2"
@@ -44,14 +44,20 @@ build = "cp38-*"
 [tool.cibuildwheel.linux]
 repair-wheel-command = [
   "auditwheel repair -w {dest_dir} {wheel}",
-  "pipx run abi3audit --strict --report {wheel}",
+  "pip install -U abi3audit",
+  "abi3audit --strict --report {wheel}",
 ]
 
 [tool.cibuildwheel.macos]
+archs = ["universal2"]
 repair-wheel-command = [
-  "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}",
-  "pipx run abi3audit --strict --report {wheel}",
+  "cp {wheel} {dest_dir}",
+  "pip install -U abi3audit",
+  "abi3audit --strict --report {wheel}",
 ]
 
 [tool.cibuildwheel.windows]
-repair-wheel-command = "pipx run abi3audit --strict --report {wheel}"
+repair-wheel-command = [
+  "pip install -U abi3audit",
+  "pipx run abi3audit --strict --report {wheel}",
+]
