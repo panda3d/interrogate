@@ -74,6 +74,7 @@ input(istream &in) {
  */
 void InterrogateFunctionWrapper::
 remap_indices(const IndexRemapper &remap) {
+  _function = remap.map_from(_function);
   _return_value_destructor = remap.map_from(_return_value_destructor);
   _return_type = remap.map_from(_return_type);
 
