@@ -281,6 +281,18 @@ ALWAYS_INLINE PyObject *Py_XNewRef(PyObject *obj) {
 }
 #endif
 
+/* Python 3.11 */
+
+#if PY_VERSION_HEX < 0x030B0000
+INLINE PyObject *PyType_GetName(PyTypeObject *type) {
+  return PyObject_GetAttrString((PyObject *)type, "__name__");
+}
+
+INLINE PyObject *PyType_GetQualName(PyTypeObject *type) {
+  return PyObject_GetAttrString((PyObject *)type, "__qualname__");
+}
+#endif
+
 /* Python 3.12 */
 
 #if PY_VERSION_HEX < 0x030C0000
