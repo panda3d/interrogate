@@ -47,8 +47,14 @@ function(add_python_target target)
   endforeach(arg)
 
   string(REGEX REPLACE "^.*\\." "" basename "${module_name}")
-  string(REGEX REPLACE "\\.[^.]+$" "" namespace "${module_name}")
-  string(REPLACE "." "/" slash_namespace "${namespace}")
+
+  if(module_name MATCHES "[.]")
+    string(REGEX REPLACE "\\.[^.]+$" "" namespace "${module_name}")
+    string(REPLACE "." "/" slash_namespace "/${namespace}")
+  else()
+    set(namespace "")
+    set(slash_namespace "")
+  endif()
 
   if(CMAKE_VERSION VERSION_LESS "3.26")
     add_library(${target} ${MODULE_TYPE} ${sources})
@@ -62,7 +68,7 @@ function(add_python_target target)
   endif()
 
   if(NOT MODULE_TYPE STREQUAL "STATIC")
-    set(_outdir "${PANDA_OUTPUT_DIR}/${slash_namespace}")
+    set(_outdir "${PANDA_OUTPUT_DIR}${slash_namespace}")
 
     set_target_properties(${target} PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY "${_outdir}"
@@ -78,7 +84,7 @@ function(add_python_target target)
     endforeach(_config)
 
     if(PYTHON_ARCH_INSTALL_DIR)
-      install(TARGETS ${target} EXPORT "${export}" COMPONENT "${component}" DESTINATION "${PYTHON_ARCH_INSTALL_DIR}/${slash_namespace}")
+      install(TARGETS ${target} EXPORT "${export}" COMPONENT "${component}" DESTINATION "${PYTHON_ARCH_INSTALL_DIR}${slash_namespace}")
     endif()
 
   else()
