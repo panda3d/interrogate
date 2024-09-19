@@ -37,7 +37,6 @@ install.components = ["tools", "python_modules"]
 [tool.scikit-build.wheel.packages]
 interrogate = "python/interrogate"
 interrogate_module = "python/interrogate_module"
-interrogatedb = "python/interrogatedb"
 
 [tool.cibuildwheel]
 build = "cp38-*"
