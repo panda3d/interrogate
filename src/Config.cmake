@@ -83,6 +83,15 @@ if(Python_FOUND)
   set(PYTHON_INCLUDE_DIRS ${Python_INCLUDE_DIRS})
   set(PYTHON_LIBRARY_DIRS ${Python_LIBRARY_DIRS})
   set(PYTHON_VERSION_STRING ${Python_VERSION})
+
+  execute_process(COMMAND ${Python_EXECUTABLE}
+    -c "import sysconfig;print(sysconfig.get_config_var('Py_GIL_DISABLED') or 0)"
+    OUTPUT_VARIABLE PYTHON_FREETHREADED
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(PYTHON_FREETHREADED)
+    # The free-threaded build has no stable ABI (yet).
+    set(_IMPORTED_AS Python::Module)
+  endif()
 endif()
 
 if(CMAKE_VERSION VERSION_LESS "3.15")
@@ -162,7 +171,15 @@ if(HAVE_PYTHON)
 
   endif()
 
-  if(CYGWIN)
+  if(PYTHON_FREETHREADED)
+    if(CYGWIN)
+      set(_EXT_SUFFIX ".${Python_SOABI}.dll")
+    elseif(WIN32)
+      set(_EXT_SUFFIX ".${Python_SOABI}.pyd")
+    else()
+      set(_EXT_SUFFIX ".${Python_SOABI}.so")
+    endif()
+  elseif(CYGWIN)
     set(_EXT_SUFFIX ".dll")
   elseif(WIN32)
     set(_EXT_SUFFIX ".pyd")

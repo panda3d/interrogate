@@ -48,10 +48,13 @@ InterfaceMakerPythonSimple::
  */
 void InterfaceMakerPythonSimple::
 write_includes(std::ostream &out) {
-  out << "#if PY_VERSION_HEX >= 0x30300000\n";
+  out << "#if PY_VERSION_HEX >= 0x30300000 && !defined(Py_GIL_DISABLED)\n";
   out << "#define Py_LIMITED_API 0x30300000\n";
   out << "#endif\n\n";
   InterfaceMakerPython::write_includes(out);
+  out << "\n#ifdef Py_GIL_DISABLED\n";
+  out << "static PyMutex mutex;\n";
+  out << "#endif\n\n";
 }
 
 /**
@@ -132,7 +135,11 @@ write_module(ostream &out,ostream *out_h, InterrogateModuleDef *def) {
 
       << "INIT_FUNC() {\n"
       << "#if PY_MAJOR_VERSION >= 3\n"
-      << "  return PyModule_Create(&python_simple_module);\n"
+      << "  PyObject *module = PyModule_Create(&python_simple_module);\n"
+      << "#ifdef Py_GIL_DISABLED\n"
+      << "  PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);\n"
+      << "#endif\n"
+      << "  return module;\n"
       << "#else\n"
       << "  Py_InitModule(\"" << def->library_name << "\", python_simple_funcs);\n"
       << "#endif\n"
@@ -380,6 +387,9 @@ void InterfaceMakerPythonSimple::write_function_instance(ostream &out, Interface
         << "    }\n";
   }
 
+  out << "#ifdef Py_GIL_DISABLED\n";
+  out << "    PyMutex_Lock(&mutex);\n";
+  out << "#endif\n";
   if (track_interpreter) {
     out << "    in_interpreter = 0;\n";
   }
@@ -397,6 +407,9 @@ void InterfaceMakerPythonSimple::write_function_instance(ostream &out, Interface
     if (track_interpreter) {
       out << "    in_interpreter = 1;\n";
     }
+    out << "#ifdef Py_GIL_DISABLED\n";
+    out << "    PyMutex_Unlock(&mutex);\n";
+    out << "#endif\n";
     if (!extra_cleanup.empty()) {
       out << "   " << extra_cleanup << "\n";
     }
@@ -411,6 +424,9 @@ void InterfaceMakerPythonSimple::write_function_instance(ostream &out, Interface
       if (track_interpreter) {
         out << "    in_interpreter = 1;\n";
       }
+      out << "#ifdef Py_GIL_DISABLED\n";
+      out << "    PyMutex_Unlock(&mutex);\n";
+      out << "#endif\n";
       if (!extra_cleanup.empty()) {
         out << "   " << extra_cleanup << "\n";
       }
@@ -425,6 +441,9 @@ void InterfaceMakerPythonSimple::write_function_instance(ostream &out, Interface
       if (track_interpreter) {
         out << "    in_interpreter = 1;\n";
       }
+      out << "#ifdef Py_GIL_DISABLED\n";
+      out << "    PyMutex_Unlock(&mutex);\n";
+      out << "#endif\n";
       if (!extra_cleanup.empty()) {
         out << "   " << extra_cleanup << "\n";
       }
