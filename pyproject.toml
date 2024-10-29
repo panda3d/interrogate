@@ -39,26 +39,26 @@ interrogate = "python/interrogate"
 interrogate_module = "python/interrogate_module"
 
 [tool.cibuildwheel]
-build = "cp38-*"
+build = "cp38-* cp313t-*"
+free-threaded-support = true
 
 [tool.cibuildwheel.linux]
 repair-wheel-command = [
   "auditwheel repair -w {dest_dir} {wheel}",
-  "pip install -U abi3audit",
-  "abi3audit --strict --report {wheel}",
 ]
 
 [tool.cibuildwheel.macos]
 archs = ["universal2"]
 repair-wheel-command = [
   "cp {wheel} {dest_dir}",
-  "pip install -U abi3audit",
-  "abi3audit --strict --report {wheel}",
 ]
 
 [tool.cibuildwheel.windows]
 repair-wheel-command = [
   "copy {wheel} {dest_dir}",
-  "pip install -U abi3audit",
-  "pipx run abi3audit --strict --report {wheel}",
 ]
+
+[[tool.cibuildwheel.overrides]]
+select = "cp38-*"
+inherit.repair-wheel-command = "append"
+repair-wheel-command = "pipx run abi3audit --strict --report {wheel}"
