@@ -85,6 +85,7 @@ function(add_python_target target)
 
     if(PYTHON_ARCH_INSTALL_DIR)
       install(TARGETS ${target} EXPORT "${export}" COMPONENT "${component}" DESTINATION "${PYTHON_ARCH_INSTALL_DIR}${slash_namespace}")
+      install(FILES "${basename}.pyi" OPTIONAL COMPONENT "${component}" DESTINATION "${PYTHON_ARCH_INSTALL_DIR}${slash_namespace}")
     endif()
 
   else()
