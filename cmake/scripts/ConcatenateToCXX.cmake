@@ -51,6 +51,9 @@ foreach(infile ${INPUT_FILES})
       break()
     endif()
 
+    # Replace newlines
+    string(REPLACE "0d0a" "\n" data "${data}")
+
     # Count the bytes we're adding
     string(LENGTH "${data}" strlen)
     math(EXPR byte_count "${byte_count} + (${strlen} / 2)")
