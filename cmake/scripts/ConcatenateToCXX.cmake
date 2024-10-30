@@ -52,7 +52,7 @@ foreach(infile ${INPUT_FILES})
     endif()
 
     # Replace newlines
-    string(REPLACE "0d0a" "\n" data "${data}")
+    string(REPLACE "0d0a" "0a" data "${data}")
 
     # Count the bytes we're adding
     string(LENGTH "${data}" strlen)
