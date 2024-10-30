@@ -58,7 +58,7 @@ function(add_python_target target)
 
   if(CMAKE_VERSION VERSION_LESS "3.26")
     add_library(${target} ${MODULE_TYPE} ${sources})
-    target_link_libraries(${target} PKG::PYTHON)
+    target_link_libraries(${target} PUBLIC PKG::PYTHON)
   else()
     if(MODULE_TYPE STREQUAL "MODULE" AND NOT PYTHON_FREETHREADED)
       Python_add_library(${target} MODULE USE_SABI 3.3 ${sources})
