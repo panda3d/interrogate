@@ -508,6 +508,7 @@ write_code(ostream &out_code,ostream * out_include, InterrogateModuleDef *def) {
     out_code << "};\n\n";
   }
 
+#if 0
   if (!no_database) {
     // Now build the module definition structure to add ourselves to the
     // global interrogate database.
@@ -551,6 +552,7 @@ write_code(ostream &out_code,ostream * out_include, InterrogateModuleDef *def) {
         << "  interrogate_request_module(&_in_module_def);\n"
         << "}\n\n";
   }
+#endif
 }
 
 /**

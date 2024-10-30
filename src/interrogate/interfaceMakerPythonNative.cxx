@@ -1760,14 +1760,38 @@ write_module_support(ostream &out, ostream *out_h, InterrogateModuleDef *def) {
 
   out << "  {nullptr, nullptr, 0, nullptr}\n" << "};\n\n";
 
+  if (!no_database) {
+    out << "static const InterrogateModuleDef _in_module_def = {\n"
+        << "  " << def->file_identifier << ",  /* file_identifier */\n"
+        << "  \"" << def->library_name << "\",  /* library_name */\n"
+        << "  \"" << def->library_hash_name << "\",  /* library_hash_name */\n"
+        << "  \"" << def->module_name << "\",  /* module_name */\n";
+    if (def->database_filename != nullptr) {
+      out << "  \"" << def->database_filename
+          << "\",  /* database_filename */\n";
+    } else {
+      out << "  (const char *)0,  /* database_filename */\n";
+    }
+
+    out << "  nullptr,  /* unique_names */\n"
+        << "  0,  /* num_unique_names */\n";
+    out << "  nullptr,  /* fptrs */\n"
+        << "  0,  /* num_fptrs */\n";
+    out << "  1,  /* first_index */\n"
+        << "  " << InterrogateDatabase::get_ptr()->get_next_index()
+        << "  /* next_index */\n"
+        << "};\n\n";
+  }
+
+  const char *def_ptr = no_database ? "nullptr" : "&_in_module_def";
   if (_external_imports.empty()) {
-    out << "extern const struct LibraryDef " << def->library_name << "_moddef = {python_simple_funcs, exports, nullptr};\n";
+    out << "extern const struct LibraryDef " << def->library_name << "_moddef = {python_simple_funcs, exports, nullptr, " << def_ptr << "};\n";
   } else {
     out <<
       "#ifdef LINK_ALL_STATIC\n"
-      "extern const struct LibraryDef " << def->library_name << "_moddef = {python_simple_funcs, exports, nullptr};\n"
+      "extern const struct LibraryDef " << def->library_name << "_moddef = {python_simple_funcs, exports, nullptr, " << def_ptr << "};\n"
       "#else\n"
-      "extern const struct LibraryDef " << def->library_name << "_moddef = {python_simple_funcs, exports, imports};\n"
+      "extern const struct LibraryDef " << def->library_name << "_moddef = {python_simple_funcs, exports, imports, " << def_ptr << "};\n"
       "#endif\n";
   }
   if (out_h != nullptr) {

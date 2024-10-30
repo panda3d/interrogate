@@ -158,9 +158,7 @@ static bool print_dependent_types(const string &lib1, const string &lib2) {
 }
 
 int write_python_table_native(std::ostream &out) {
-  out << "\n#include \"dtoolbase.h\"\n"
-      << "#include \"interrogate_request.h\"\n\n"
-      << "#include \"py_panda.h\"\n\n";
+  out << "#include \"py_panda.h\"\n\n";
 
   int count = 0;
 
@@ -298,10 +296,18 @@ int write_python_table_native(std::ostream &out) {
 
   out.put('\n');
 
-  out << "#if PY_MAJOR_VERSION >= 3\n"
-      << "extern \"C\" EXPORT_CLASS PyObject *PyInit_" << library_name << "();\n"
+  out << "#if defined(_WIN32) && !defined(CPPPARSER) && !defined(LINK_ALL_STATIC)\n"
+      << "#define EXPORT_INIT_FUNC __declspec(dllexport)\n"
+      << "#elif __GNUC__ >= 4 && !defined(CPPPARSER) && !defined(LINK_ALL_STATIC)\n"
+      << "#define EXPORT_INIT_FUNC __attribute__((visibility(\"default\")))\n"
       << "#else\n"
-      << "extern \"C\" EXPORT_CLASS void init" << library_name << "();\n"
+      << "#define EXPORT_INIT_FUNC\n"
+      << "#endif\n\n";
+
+  out << "#if PY_MAJOR_VERSION >= 3\n"
+      << "extern \"C\" EXPORT_INIT_FUNC PyObject *PyInit_" << library_name << "();\n"
+      << "#else\n"
+      << "extern \"C\" EXPORT_INIT_FUNC void init" << library_name << "();\n"
       << "#endif\n";
 
   out << "\n"

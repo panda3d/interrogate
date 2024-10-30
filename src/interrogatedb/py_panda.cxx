@@ -5,7 +5,6 @@
  */
 
 #include "py_panda.h"
-#include "config_interrogatedb.h"
 #include "executionEnvironment.h"
 
 #ifdef HAVE_PYTHON
@@ -701,17 +700,17 @@ PyObject *Dtool_PyModuleInitHelper(const LibraryDef *defs[], const char *modulen
   // to do that.  Perhaps we'll find a better place for this in the future.
   static bool initialized_main_dir = false;
   if (!initialized_main_dir) {
-    if (interrogatedb_cat.is_debug()) {
+    /*if (interrogatedb_cat.is_debug()) {
       // Good opportunity to print this out once, at startup.
       interrogatedb_cat.debug()
         << "Python " << version << "\n";
-    }
+    }*/
 
     if (!ExecutionEnvironment::has_environment_variable("MAIN_DIR")) {
       // Grab the __main__ module.
       PyObject *main_module = PyImport_ImportModule("__main__");
       if (main_module == NULL) {
-        interrogatedb_cat.warning() << "Unable to import __main__\n";
+        std::cerr << "Warning: unable to import __main__\n";
       }
 
       // Extract the __file__ attribute, if present.
@@ -743,7 +742,7 @@ PyObject *Dtool_PyModuleInitHelper(const LibraryDef *defs[], const char *modulen
         }
 #endif
         else {
-          interrogatedb_cat.warning() << "Invalid string for __main__.__file__\n";
+          std::cerr << "Invalid string for __main__.__file__\n";
         }
       }
       ExecutionEnvironment::shadow_environment_variable("MAIN_DIR", main_dir.to_os_specific());

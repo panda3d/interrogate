@@ -12,6 +12,7 @@
 #include "pnotify.h"
 #include "vector_uchar.h"
 #include "register_type.h"
+#include "interrogate_request.h"
 
 #if defined(HAVE_PYTHON) && !defined(CPPPARSER)
 
@@ -338,6 +339,7 @@ struct LibraryDef {
   PyMethodDef *const _methods;
   const Dtool_TypeDef *const _types;
   Dtool_TypeDef *const _external_types;
+  const InterrogateModuleDef *const _module_def;
 };
 
 #if PY_MAJOR_VERSION >= 3
