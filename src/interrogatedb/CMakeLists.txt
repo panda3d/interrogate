@@ -42,9 +42,9 @@ target_link_libraries(interrogatedb dtoolutil)
 install(TARGETS interrogatedb
   DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/panda3d)
-install(FILES ${INTERROGATEDB_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/panda3d)
-install(FILES ${IGATERUNTIME_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/panda3d)
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/interrogatedb)
+install(FILES ${INTERROGATEDB_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/interrogatedb)
+install(FILES ${IGATERUNTIME_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/interrogatedb)
 
 # ALSO: This has an Interrogate binding! Take care of that if we want it.
 # Note we don't use the regular Interrogate macros; this has some custom flags
