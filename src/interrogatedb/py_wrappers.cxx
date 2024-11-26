@@ -68,8 +68,9 @@ _init_wrapper_type(PyType_Spec &spec, const char *abc = nullptr) {
   PyObject *istate_dict = PyInterpreterState_GetDict(PyInterpreterState_Get());
   PyObject *key_obj = PyUnicode_FromString(spec.name);
 
+  PyObject *type;
   Py_BEGIN_CRITICAL_SECTION(istate_dict);
-  PyObject *type = PyDict_GetItem(istate_dict, key_obj);
+  type = PyDict_GetItem(istate_dict, key_obj);
   if (type == nullptr) {
     type = PyType_FromSpec(&spec);
     if (type != nullptr) {
