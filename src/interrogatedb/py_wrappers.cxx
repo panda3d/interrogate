@@ -16,7 +16,15 @@
 #define _COLLECTIONS_ABC "_abcoll"
 #endif
 
-static void _register_collection(PyTypeObject *type, const char *abc) {
+#ifndef Py_TPFLAGS_IMMUTABLETYPE
+#define Py_TPFLAGS_IMMUTABLETYPE 0
+#endif
+
+/**
+ * Registers the type with collections.abc.
+ */
+static void
+_register_collection(PyObject *type, const char *abc) {
 #if PY_MAJOR_VERSION >= 3
   PyObject *module_name = PyUnicode_InternFromString(_COLLECTIONS_ABC);
 #else
@@ -35,7 +43,7 @@ static void _register_collection(PyTypeObject *type, const char *abc) {
       PyObject *obj = nullptr;
       if (register_str == nullptr ||
           PyDict_GetItemStringRef(dict, abc, &obj) <= 0 ||
-          PyObject_CallMethodOneArg(obj, register_str, (PyObject *)type) == nullptr) {
+          PyObject_CallMethodOneArg(obj, register_str, type) == nullptr) {
         PyErr_Print();
       }
       Py_XDECREF(obj);
@@ -48,14 +56,62 @@ static void _register_collection(PyTypeObject *type, const char *abc) {
 }
 
 /**
+ * Creates the given type from a spec, unless it's already been created in
+ * this interpreter before.  If abc is not null, registers the type with
+ * the given collections.abc type.
+ *
+ * Does not increment the reference count of the result.
+ */
+static PyObject *
+_init_wrapper_type(PyType_Spec &spec, const char *abc = nullptr) {
+#if PY_VERSION_HEX >= 0x030d0000 // 3.13
+  PyObject *istate_dict = PyInterpreterState_GetDict(PyInterpreterState_Get());
+  PyObject *key_obj = PyUnicode_FromString(spec.name);
+
+  Py_BEGIN_CRITICAL_SECTION(istate_dict);
+  PyObject *type = PyDict_GetItem(istate_dict, key_obj);
+  if (type == nullptr) {
+    type = PyType_FromSpec(&spec);
+    if (type != nullptr) {
+      PyDict_SetItem(istate_dict, key_obj, type);
+      Py_DECREF(type);
+
+      if (abc != nullptr) {
+        _register_collection(type, abc);
+      }
+    }
+  }
+  Py_END_CRITICAL_SECTION();
+  Py_DECREF(key_obj);
+#else
+  PyObject *type = PySys_GetObject(spec.name);
+  if (type == nullptr) {
+    type = PyType_FromSpec(&spec);
+    if (type != nullptr) {
+      PySys_SetObject(spec.name, type);
+      Py_DECREF(type);
+
+      // If the collections.abc module is loaded, register this as a subclass.
+      if (abc != nullptr) {
+        _register_collection(type, abc);
+      }
+    }
+  }
+#endif
+  return type;
+}
+
+/**
  * These classes are returned from properties that require a subscript
  * interface, ie. something.children[i] = 3.
  */
 static void Dtool_WrapperBase_dealloc(PyObject *self) {
   Dtool_WrapperBase *wrap = (Dtool_WrapperBase *)self;
   nassertv(wrap);
+  PyTypeObject *tp = Py_TYPE(self);
   Py_XDECREF(wrap->_self);
-  Py_TYPE(self)->tp_free(self);
+  tp->tp_free(self);
+  Py_DECREF(tp);
 }
 
 static PyObject *Dtool_WrapperBase_repr(PyObject *self) {
@@ -521,99 +577,36 @@ static PyObject *Dtool_MappingWrapper_keys(PyObject *self, PyObject *) {
     return Dtool_Raise_TypeError("property does not support keys()");
   }
 
-  Dtool_MappingWrapper *keys = (Dtool_MappingWrapper *)PyObject_MALLOC(sizeof(Dtool_MappingWrapper));
-  if (keys == nullptr) {
-    return PyErr_NoMemory();
-  }
-
-  static PySequenceMethods seq_methods = {
-    Dtool_SequenceWrapper_length,
-    nullptr, // sq_concat
-    nullptr, // sq_repeat
-    Dtool_SequenceWrapper_getitem,
-    nullptr, // sq_slice
-    nullptr, // sq_ass_item
-    nullptr, // sq_ass_slice
-    Dtool_SequenceWrapper_contains,
-    nullptr, // sq_inplace_concat
-    nullptr, // sq_inplace_repeat
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
+    {Py_tp_repr, (void *)&Dtool_MappingWrapper_Keys_repr},
+    {Py_tp_iter, (void *)&PySeqIter_New},
+    {Py_sq_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_sq_item, (void *)&Dtool_SequenceWrapper_getitem},
+    {Py_sq_contains, (void *)&Dtool_SequenceWrapper_contains},
+    {0, nullptr},
   };
 
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
-    "sequence wrapper",
-    sizeof(Dtool_SequenceWrapper),
-    0, // tp_itemsize
-    Dtool_WrapperBase_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_compare
-    Dtool_MappingWrapper_Keys_repr,
-    nullptr, // tp_as_number
-    &seq_methods,
-    nullptr, // tp_as_mapping
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    PyObject_GenericSetAttr,
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,
-    nullptr, // tp_doc
-    nullptr, // tp_traverse
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    PySeqIter_New,
-    nullptr, // tp_iternext
-    nullptr, // tp_methods
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    nullptr, // tp_descr_get
-    nullptr, // tp_descr_set
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    PyType_GenericAlloc,
-    nullptr, // tp_new
-    PyObject_Del,
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_mapping_wrapper_keys",
+    sizeof(Dtool_MappingWrapper),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
   };
 
-  static bool registered = false;
-  if (!registered) {
-    registered = true;
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec, "MappingView");
+  nassertr_always(wrapper_type != nullptr, nullptr);
 
-    if (PyType_Ready(&wrapper_type) < 0) {
-      return nullptr;
-    }
-
-    // If the collections.abc module is loaded, register this as a subclass.
-    _register_collection((PyTypeObject *)&wrapper_type, "MappingView");
+  Dtool_MappingWrapper *keys = PyObject_New(Dtool_MappingWrapper, (PyTypeObject *)wrapper_type);
+  if (keys != nullptr) {
+    keys->_base._self = Py_XNewRef(wrap->_base._self);
+    keys->_base._name = wrap->_base._name;
+    keys->_keys._len_func = wrap->_keys._len_func;
+    keys->_keys._getitem_func = wrap->_keys._getitem_func;
+    keys->_getitem_func = wrap->_getitem_func;
+    keys->_setitem_func = nullptr;
   }
-
-  (void)PyObject_INIT(keys, &wrapper_type);
-  keys->_base._self = Py_XNewRef(wrap->_base._self);
-  keys->_base._name = wrap->_base._name;
-  keys->_keys._len_func = wrap->_keys._len_func;
-  keys->_keys._getitem_func = wrap->_keys._getitem_func;
-  keys->_getitem_func = wrap->_getitem_func;
-  keys->_setitem_func = nullptr;
   return (PyObject *)keys;
 }
 
@@ -661,99 +654,35 @@ static PyObject *Dtool_MappingWrapper_values(PyObject *self, PyObject *) {
     return Dtool_Raise_TypeError("property does not support values()");
   }
 
-  Dtool_MappingWrapper *values = (Dtool_MappingWrapper *)PyObject_MALLOC(sizeof(Dtool_MappingWrapper));
-  if (values == nullptr) {
-    return PyErr_NoMemory();
-  }
-
-  static PySequenceMethods seq_methods = {
-    Dtool_SequenceWrapper_length,
-    nullptr, // sq_concat
-    nullptr, // sq_repeat
-    Dtool_MappingWrapper_Values_getitem,
-    nullptr, // sq_slice
-    nullptr, // sq_ass_item
-    nullptr, // sq_ass_slice
-    Dtool_MappingWrapper_contains,
-    nullptr, // sq_inplace_concat
-    nullptr, // sq_inplace_repeat
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
+    {Py_tp_repr, (void *)&Dtool_MappingWrapper_Values_repr},
+    {Py_tp_iter, (void *)&PySeqIter_New},
+    {Py_sq_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_sq_item, (void *)&Dtool_MappingWrapper_Values_getitem},
+    {0, nullptr},
   };
 
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
-    "sequence wrapper",
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_mapping_wrapper_values",
     sizeof(Dtool_MappingWrapper),
-    0, // tp_itemsize
-    Dtool_WrapperBase_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_compare
-    Dtool_MappingWrapper_Values_repr,
-    nullptr, // tp_as_number
-    &seq_methods,
-    nullptr, // tp_as_mapping
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    PyObject_GenericSetAttr,
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,
-    nullptr, // tp_doc
-    nullptr, // tp_traverse
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    PySeqIter_New,
-    nullptr, // tp_iternext
-    nullptr, // tp_methods
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    nullptr, // tp_descr_get
-    nullptr, // tp_descr_set
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    PyType_GenericAlloc,
-    nullptr, // tp_new
-    PyObject_Del,
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
   };
 
-  static bool registered = false;
-  if (!registered) {
-    registered = true;
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec, "ValuesView");
+  nassertr_always(wrapper_type != nullptr, nullptr);
 
-    if (PyType_Ready(&wrapper_type) < 0) {
-      return nullptr;
-    }
-
-    // If the collections.abc module is loaded, register this as a subclass.
-    _register_collection((PyTypeObject *)&wrapper_type, "ValuesView");
+  Dtool_MappingWrapper *values = PyObject_New(Dtool_MappingWrapper, (PyTypeObject *)wrapper_type);
+  if (values != nullptr) {
+    values->_base._self = Py_XNewRef(wrap->_base._self);
+    values->_base._name = wrap->_base._name;
+    values->_keys._len_func = wrap->_keys._len_func;
+    values->_keys._getitem_func = wrap->_keys._getitem_func;
+    values->_getitem_func = wrap->_getitem_func;
+    values->_setitem_func = nullptr;
   }
-
-  (void)PyObject_INIT(values, &wrapper_type);
-  values->_base._self = Py_XNewRef(wrap->_base._self);
-  values->_base._name = wrap->_base._name;
-  values->_keys._len_func = wrap->_keys._len_func;
-  values->_keys._getitem_func = wrap->_keys._getitem_func;
-  values->_getitem_func = wrap->_getitem_func;
-  values->_setitem_func = nullptr;
   return (PyObject *)values;
 }
 
@@ -809,99 +738,36 @@ static PyObject *Dtool_MappingWrapper_items(PyObject *self, PyObject *) {
     return Dtool_Raise_TypeError("property does not support items()");
   }
 
-  Dtool_MappingWrapper *items = (Dtool_MappingWrapper *)PyObject_MALLOC(sizeof(Dtool_MappingWrapper));
-  if (items == nullptr) {
-    return PyErr_NoMemory();
-  }
-
-  static PySequenceMethods seq_methods = {
-    Dtool_SequenceWrapper_length,
-    nullptr, // sq_concat
-    nullptr, // sq_repeat
-    Dtool_MappingWrapper_Items_getitem,
-    nullptr, // sq_slice
-    nullptr, // sq_ass_item
-    nullptr, // sq_ass_slice
-    Dtool_MappingWrapper_contains,
-    nullptr, // sq_inplace_concat
-    nullptr, // sq_inplace_repeat
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
+    {Py_tp_repr, (void *)&Dtool_MappingWrapper_Items_repr},
+    {Py_tp_iter, (void *)&PySeqIter_New},
+    {Py_sq_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_sq_item, (void *)&Dtool_MappingWrapper_Items_getitem},
+    {Py_sq_contains, (void *)&Dtool_MappingWrapper_contains},
+    {0, nullptr},
   };
 
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
-    "sequence wrapper",
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_mapping_wrapper_items",
     sizeof(Dtool_MappingWrapper),
-    0, // tp_itemsize
-    Dtool_WrapperBase_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_compare
-    Dtool_MappingWrapper_Items_repr,
-    nullptr, // tp_as_number
-    &seq_methods,
-    nullptr, // tp_as_mapping
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    PyObject_GenericSetAttr,
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,
-    nullptr, // tp_doc
-    nullptr, // tp_traverse
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    PySeqIter_New,
-    nullptr, // tp_iternext
-    nullptr, // tp_methods
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    nullptr, // tp_descr_get
-    nullptr, // tp_descr_set
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    PyType_GenericAlloc,
-    nullptr, // tp_new
-    PyObject_Del,
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
   };
 
-  static bool registered = false;
-  if (!registered) {
-    registered = true;
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec, "MappingView");
+  nassertr_always(wrapper_type != nullptr, nullptr);
 
-    if (PyType_Ready(&wrapper_type) < 0) {
-      return nullptr;
-    }
-
-    // If the collections.abc module is loaded, register this as a subclass.
-    _register_collection((PyTypeObject *)&wrapper_type, "MappingView");
+  Dtool_MappingWrapper *items = PyObject_New(Dtool_MappingWrapper, (PyTypeObject *)wrapper_type);
+  if (items != nullptr) {
+    items->_base._self = Py_XNewRef(wrap->_base._self);
+    items->_base._name = wrap->_base._name;
+    items->_keys._len_func = wrap->_keys._len_func;
+    items->_keys._getitem_func = wrap->_keys._getitem_func;
+    items->_getitem_func = wrap->_getitem_func;
+    items->_setitem_func = nullptr;
   }
-
-  (void)PyObject_INIT(items, &wrapper_type);
-  items->_base._self = Py_XNewRef(wrap->_base._self);
-  items->_base._name = wrap->_base._name;
-  items->_keys._len_func = wrap->_keys._len_func;
-  items->_keys._getitem_func = wrap->_keys._getitem_func;
-  items->_getitem_func = wrap->_getitem_func;
-  items->_setitem_func = nullptr;
   return (PyObject *)items;
 }
 
@@ -1184,103 +1050,41 @@ Dtool_StaticProperty_set(PyGetSetDescrObject *descr, PyObject *obj, PyObject *va
  * This wraps around a property that exposes a sequence interface.
  */
 Dtool_SequenceWrapper *Dtool_NewSequenceWrapper(PyObject *self, const char *name) {
-  Dtool_SequenceWrapper *wrap = (Dtool_SequenceWrapper *)PyObject_MALLOC(sizeof(Dtool_SequenceWrapper));
-  if (wrap == nullptr) {
-    return (Dtool_SequenceWrapper *)PyErr_NoMemory();
-  }
-
-  static PySequenceMethods seq_methods = {
-    Dtool_SequenceWrapper_length,
-    nullptr, // sq_concat
-    nullptr, // sq_repeat
-    Dtool_SequenceWrapper_getitem,
-    nullptr, // sq_slice
-    nullptr, // sq_ass_item
-    nullptr, // sq_ass_slice
-    Dtool_SequenceWrapper_contains,
-    nullptr, // sq_inplace_concat
-    nullptr, // sq_inplace_repeat
-  };
-
   static PyMethodDef methods[] = {
     {"index", &Dtool_SequenceWrapper_index, METH_O, nullptr},
     {"count", &Dtool_SequenceWrapper_count, METH_O, nullptr},
     {nullptr, nullptr, 0, nullptr}
   };
 
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
-    "sequence wrapper",
-    sizeof(Dtool_SequenceWrapper),
-    0, // tp_itemsize
-    Dtool_WrapperBase_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_compare
-    Dtool_SequenceWrapper_repr,
-    nullptr, // tp_as_number
-    &seq_methods,
-    nullptr, // tp_as_mapping
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    PyObject_GenericSetAttr,
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,
-    nullptr, // tp_doc
-    nullptr, // tp_traverse
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    PySeqIter_New,
-    nullptr, // tp_iternext
-    methods,
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    nullptr, // tp_descr_get
-    nullptr, // tp_descr_set
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    PyType_GenericAlloc,
-    nullptr, // tp_new
-    PyObject_Del,
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
+    {Py_tp_repr, (void *)&Dtool_SequenceWrapper_repr},
+    {Py_tp_iter, (void *)&PySeqIter_New},
+    {Py_sq_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_sq_item, (void *)&Dtool_SequenceWrapper_getitem},
+    {Py_sq_contains, (void *)&Dtool_SequenceWrapper_contains},
+    {Py_tp_methods, (void *)methods},
+    {0, nullptr},
   };
 
-  static bool registered = false;
-  if (!registered) {
-    registered = true;
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_sequence_wrapper",
+    sizeof(Dtool_SequenceWrapper),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
+  };
 
-    if (PyType_Ready(&wrapper_type) < 0) {
-      return nullptr;
-    }
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec, "Sequence");
+  nassertr_always(wrapper_type != nullptr, nullptr);
 
-    // If the collections.abc module is loaded, register this as a subclass.
-    _register_collection((PyTypeObject *)&wrapper_type, "Sequence");
+  Dtool_SequenceWrapper *wrap = PyObject_New(Dtool_SequenceWrapper, (PyTypeObject *)wrapper_type);
+  if (wrap != nullptr) {
+    wrap->_base._self = Py_XNewRef(self);
+    wrap->_base._name = name;
+    wrap->_len_func = nullptr;
+    wrap->_getitem_func = nullptr;
   }
-
-  (void)PyObject_INIT(wrap, &wrapper_type);
-  wrap->_base._self = Py_XNewRef(self);
-  wrap->_base._name = name;
-  wrap->_len_func = nullptr;
-  wrap->_getitem_func = nullptr;
   return wrap;
 }
 
@@ -1288,24 +1092,6 @@ Dtool_SequenceWrapper *Dtool_NewSequenceWrapper(PyObject *self, const char *name
  * This wraps around a property that exposes a mutable sequence interface.
  */
 Dtool_MutableSequenceWrapper *Dtool_NewMutableSequenceWrapper(PyObject *self, const char *name) {
-  Dtool_MutableSequenceWrapper *wrap = (Dtool_MutableSequenceWrapper *)PyObject_MALLOC(sizeof(Dtool_MutableSequenceWrapper));
-  if (wrap == nullptr) {
-    return (Dtool_MutableSequenceWrapper *)PyErr_NoMemory();
-  }
-
-  static PySequenceMethods seq_methods = {
-    Dtool_SequenceWrapper_length,
-    nullptr, // sq_concat
-    nullptr, // sq_repeat
-    Dtool_SequenceWrapper_getitem,
-    nullptr, // sq_slice
-    Dtool_MutableSequenceWrapper_setitem,
-    nullptr, // sq_ass_slice
-    Dtool_SequenceWrapper_contains,
-    Dtool_MutableSequenceWrapper_extend,
-    nullptr, // sq_inplace_repeat
-  };
-
   static PyMethodDef methods[] = {
     {"index", &Dtool_SequenceWrapper_index, METH_O, nullptr},
     {"count", &Dtool_SequenceWrapper_count, METH_O, nullptr},
@@ -1318,81 +1104,39 @@ Dtool_MutableSequenceWrapper *Dtool_NewMutableSequenceWrapper(PyObject *self, co
     {nullptr, nullptr, 0, nullptr}
   };
 
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
-    "sequence wrapper",
-    sizeof(Dtool_MutableSequenceWrapper),
-    0, // tp_itemsize
-    Dtool_WrapperBase_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_compare
-    Dtool_SequenceWrapper_repr,
-    nullptr, // tp_as_number
-    &seq_methods,
-    nullptr, // tp_as_mapping
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    PyObject_GenericSetAttr,
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,
-    nullptr, // tp_doc
-    nullptr, // tp_traverse
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    PySeqIter_New,
-    nullptr, // tp_iternext
-    methods,
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    nullptr, // tp_descr_get
-    nullptr, // tp_descr_set
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    PyType_GenericAlloc,
-    nullptr, // tp_new
-    PyObject_Del,
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
+    {Py_tp_repr, (void *)&Dtool_SequenceWrapper_repr},
+    {Py_tp_iter, (void *)&PySeqIter_New},
+    {Py_sq_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_sq_item, (void *)&Dtool_SequenceWrapper_getitem},
+    {Py_sq_ass_item, (void *)&Dtool_MutableSequenceWrapper_setitem},
+    {Py_sq_contains, (void *)&Dtool_SequenceWrapper_contains},
+    {Py_sq_inplace_concat, (void *)&Dtool_MutableSequenceWrapper_extend},
+    {Py_tp_methods, (void *)methods},
+    {0, nullptr},
   };
 
-  static bool registered = false;
-  if (!registered) {
-    registered = true;
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_mutable_sequence_wrappes",
+    sizeof(Dtool_MutableSequenceWrapper),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
+  };
 
-    if (PyType_Ready(&wrapper_type) < 0) {
-      return nullptr;
-    }
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec, "MutableSequence");
+  nassertr_always(wrapper_type != nullptr, nullptr);
 
-    // If the collections.abc module is loaded, register this as a subclass.
-    _register_collection((PyTypeObject *)&wrapper_type, "MutableSequence");
+  Dtool_MutableSequenceWrapper *wrap = PyObject_New(Dtool_MutableSequenceWrapper, (PyTypeObject *)wrapper_type);
+  if (wrap != nullptr) {
+    wrap->_base._self = Py_XNewRef(self);
+    wrap->_base._name = name;
+    wrap->_len_func = nullptr;
+    wrap->_getitem_func = nullptr;
+    wrap->_setitem_func = nullptr;
+    wrap->_insert_func = nullptr;
   }
-
-  (void)PyObject_INIT(wrap, &wrapper_type);
-  wrap->_base._self = Py_XNewRef(self);
-  wrap->_base._name = name;
-  wrap->_len_func = nullptr;
-  wrap->_getitem_func = nullptr;
-  wrap->_setitem_func = nullptr;
-  wrap->_insert_func = nullptr;
   return wrap;
 }
 
@@ -1400,30 +1144,6 @@ Dtool_MutableSequenceWrapper *Dtool_NewMutableSequenceWrapper(PyObject *self, co
  * This wraps around a mapping interface, with getitem function.
  */
 Dtool_MappingWrapper *Dtool_NewMappingWrapper(PyObject *self, const char *name) {
-  Dtool_MappingWrapper *wrap = (Dtool_MappingWrapper *)PyObject_MALLOC(sizeof(Dtool_MappingWrapper));
-  if (wrap == nullptr) {
-    return (Dtool_MappingWrapper *)PyErr_NoMemory();
-  }
-
-  static PySequenceMethods seq_methods = {
-    Dtool_SequenceWrapper_length,
-    nullptr, // sq_concat
-    nullptr, // sq_repeat
-    nullptr, // sq_item
-    nullptr, // sq_slice
-    nullptr, // sq_ass_item
-    nullptr, // sq_ass_slice
-    Dtool_MappingWrapper_contains,
-    nullptr, // sq_inplace_concat
-    nullptr, // sq_inplace_repeat
-  };
-
-  static PyMappingMethods map_methods = {
-    Dtool_SequenceWrapper_length,
-    Dtool_MappingWrapper_getitem,
-    nullptr, // mp_ass_subscript
-  };
-
   static PyMethodDef methods[] = {
     {"get", &Dtool_MappingWrapper_get, METH_VARARGS, nullptr},
     {"keys", &Dtool_MappingWrapper_keys, METH_NOARGS, nullptr},
@@ -1432,81 +1152,38 @@ Dtool_MappingWrapper *Dtool_NewMappingWrapper(PyObject *self, const char *name) 
     {nullptr, nullptr, 0, nullptr}
   };
 
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
-    "mapping wrapper",
-    sizeof(Dtool_MappingWrapper),
-    0, // tp_itemsize
-    Dtool_WrapperBase_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_compare
-    Dtool_WrapperBase_repr,
-    nullptr, // tp_as_number
-    &seq_methods,
-    &map_methods,
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    PyObject_GenericSetAttr,
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,
-    nullptr, // tp_doc
-    nullptr, // tp_traverse
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    Dtool_MappingWrapper_iter,
-    nullptr, // tp_iternext
-    methods,
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    nullptr, // tp_descr_get
-    nullptr, // tp_descr_set
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    PyType_GenericAlloc,
-    nullptr, // tp_new
-    PyObject_Del,
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
+    {Py_tp_repr, (void *)&Dtool_WrapperBase_repr},
+    {Py_tp_iter, (void *)&Dtool_MappingWrapper_iter},
+    {Py_sq_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_sq_contains, (void *)&Dtool_MappingWrapper_contains},
+    {Py_mp_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_mp_subscript, (void *)&Dtool_MappingWrapper_getitem},
+    {Py_tp_methods, (void *)methods},
+    {0, nullptr},
   };
 
-  static bool registered = false;
-  if (!registered) {
-    registered = true;
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_mapping_wrapper",
+    sizeof(Dtool_MappingWrapper),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
+  };
 
-    if (PyType_Ready(&wrapper_type) < 0) {
-      return nullptr;
-    }
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec, "Mapping");
+  nassertr_always(wrapper_type != nullptr, nullptr);
 
-    // If the collections.abc module is loaded, register this as a subclass.
-    _register_collection((PyTypeObject *)&wrapper_type, "Mapping");
+  Dtool_MappingWrapper *wrap = PyObject_New(Dtool_MappingWrapper, (PyTypeObject *)wrapper_type);
+  if (wrap != nullptr) {
+    wrap->_base._self = Py_XNewRef(self);
+    wrap->_base._name = name;
+    wrap->_keys._len_func = nullptr;
+    wrap->_keys._getitem_func = nullptr;
+    wrap->_getitem_func = nullptr;
+    wrap->_setitem_func = nullptr;
   }
-
-  (void)PyObject_INIT(wrap, &wrapper_type);
-  wrap->_base._self = Py_XNewRef(self);
-  wrap->_base._name = name;
-  wrap->_keys._len_func = nullptr;
-  wrap->_keys._getitem_func = nullptr;
-  wrap->_getitem_func = nullptr;
-  wrap->_setitem_func = nullptr;
   return wrap;
 }
 
@@ -1514,30 +1191,6 @@ Dtool_MappingWrapper *Dtool_NewMappingWrapper(PyObject *self, const char *name) 
  * This wraps around a mapping interface, with getitem/setitem functions.
  */
 Dtool_MappingWrapper *Dtool_NewMutableMappingWrapper(PyObject *self, const char *name) {
-  Dtool_MappingWrapper *wrap = (Dtool_MappingWrapper *)PyObject_MALLOC(sizeof(Dtool_MappingWrapper));
-  if (wrap == nullptr) {
-    return (Dtool_MappingWrapper *)PyErr_NoMemory();
-  }
-
-  static PySequenceMethods seq_methods = {
-    Dtool_SequenceWrapper_length,
-    nullptr, // sq_concat
-    nullptr, // sq_repeat
-    nullptr, // sq_item
-    nullptr, // sq_slice
-    nullptr, // sq_ass_item
-    nullptr, // sq_ass_slice
-    Dtool_MappingWrapper_contains,
-    nullptr, // sq_inplace_concat
-    nullptr, // sq_inplace_repeat
-  };
-
-  static PyMappingMethods map_methods = {
-    Dtool_SequenceWrapper_length,
-    Dtool_MappingWrapper_getitem,
-    Dtool_MutableMappingWrapper_setitem,
-  };
-
   static PyMethodDef methods[] = {
     {"get", &Dtool_MappingWrapper_get, METH_VARARGS, nullptr},
     {"pop", &Dtool_MutableMappingWrapper_pop, METH_VARARGS, nullptr},
@@ -1551,81 +1204,39 @@ Dtool_MappingWrapper *Dtool_NewMutableMappingWrapper(PyObject *self, const char 
     {nullptr, nullptr, 0, nullptr}
   };
 
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
-    "mapping wrapper",
-    sizeof(Dtool_MappingWrapper),
-    0, // tp_itemsize
-    Dtool_WrapperBase_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_compare
-    Dtool_WrapperBase_repr,
-    nullptr, // tp_as_number
-    &seq_methods,
-    &map_methods,
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    PyObject_GenericSetAttr,
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,
-    nullptr, // tp_doc
-    nullptr, // tp_traverse
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    Dtool_MappingWrapper_iter,
-    nullptr, // tp_iternext
-    methods,
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    nullptr, // tp_descr_get
-    nullptr, // tp_descr_set
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    PyType_GenericAlloc,
-    nullptr, // tp_new
-    PyObject_Del,
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
+    {Py_tp_repr, (void *)&Dtool_WrapperBase_repr},
+    {Py_tp_iter, (void *)&Dtool_MappingWrapper_iter},
+    {Py_sq_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_sq_contains, (void *)&Dtool_MappingWrapper_contains},
+    {Py_mp_length, (void *)&Dtool_SequenceWrapper_length},
+    {Py_mp_subscript, (void *)&Dtool_MappingWrapper_getitem},
+    {Py_mp_ass_subscript, (void *)&Dtool_MutableMappingWrapper_setitem},
+    {Py_tp_methods, (void *)methods},
+    {0, nullptr},
   };
 
-  static bool registered = false;
-  if (!registered) {
-    registered = true;
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_mutable_mapping_wrapper",
+    sizeof(Dtool_MappingWrapper),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
+  };
 
-    if (PyType_Ready(&wrapper_type) < 0) {
-      return nullptr;
-    }
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec, "MutableMapping");
+  nassertr_always(wrapper_type != nullptr, nullptr);
 
-    // If the collections.abc module is loaded, register this as a subclass.
-    _register_collection((PyTypeObject *)&wrapper_type, "MutableMapping");
+  Dtool_MappingWrapper *wrap = PyObject_New(Dtool_MappingWrapper, (PyTypeObject *)wrapper_type);
+  if (wrap != nullptr) {
+    wrap->_base._self = Py_XNewRef(self);
+    wrap->_base._name = name;
+    wrap->_keys._len_func = nullptr;
+    wrap->_keys._getitem_func = nullptr;
+    wrap->_getitem_func = nullptr;
+    wrap->_setitem_func = nullptr;
   }
-
-  (void)PyObject_INIT(wrap, &wrapper_type);
-  wrap->_base._self = Py_XNewRef(self);
-  wrap->_base._name = name;
-  wrap->_keys._len_func = nullptr;
-  wrap->_keys._getitem_func = nullptr;
-  wrap->_getitem_func = nullptr;
-  wrap->_setitem_func = nullptr;
   return wrap;
 }
 
@@ -1634,68 +1245,26 @@ Dtool_MappingWrapper *Dtool_NewMutableMappingWrapper(PyObject *self, const char 
  */
 PyObject *
 Dtool_NewGenerator(PyObject *self, iternextfunc gen_next) {
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
-    "generator wrapper",
-    sizeof(Dtool_GeneratorWrapper),
-    0, // tp_itemsize
-    Dtool_WrapperBase_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_compare
-    nullptr, // tp_repr
-    nullptr, // tp_as_number
-    nullptr, // tp_as_sequence
-    nullptr, // tp_as_mapping
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    PyObject_GenericSetAttr,
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,
-    nullptr, // tp_doc
-    nullptr, // tp_traverse
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    PyObject_SelfIter,
-    Dtool_GeneratorWrapper_iternext,
-    nullptr, // tp_methods
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    nullptr, // tp_descr_get
-    nullptr, // tp_descr_set
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    PyType_GenericAlloc,
-    nullptr, // tp_new
-    PyObject_Del,
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
+    {Py_tp_repr, (void *)&Dtool_SequenceWrapper_repr},
+    {Py_tp_iter, (void *)&PyObject_SelfIter},
+    {Py_tp_iternext, (void *)&Dtool_GeneratorWrapper_iternext},
+    {0, nullptr},
   };
 
-  if (PyType_Ready(&wrapper_type) < 0) {
-    return nullptr;
-  }
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_generator_wrapper",
+    sizeof(Dtool_GeneratorWrapper),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
+  };
 
-  Dtool_GeneratorWrapper *gen;
-  gen = (Dtool_GeneratorWrapper *)PyType_GenericAlloc(&wrapper_type, 0);
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec);
+  nassertr_always(wrapper_type != nullptr, nullptr);
+
+  Dtool_GeneratorWrapper *gen = PyObject_New(Dtool_GeneratorWrapper, (PyTypeObject *)wrapper_type);
   if (gen != nullptr) {
     gen->_base._self = Py_NewRef(self);
     gen->_iternext_func = gen_next;
@@ -1709,68 +1278,27 @@ Dtool_NewGenerator(PyObject *self, iternextfunc gen_next) {
  */
 PyObject *
 Dtool_NewStaticProperty(PyTypeObject *type, const PyGetSetDef *getset) {
-  static PyTypeObject wrapper_type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "getset_descriptor",
-    sizeof(PyGetSetDescrObject),
-    0, // tp_itemsize
-    (destructor)Dtool_StaticProperty_dealloc,
-    0, // tp_vectorcall_offset
-    nullptr, // tp_getattr
-    nullptr, // tp_setattr
-    nullptr, // tp_reserved
-    (reprfunc)Dtool_StaticProperty_repr,
-    nullptr, // tp_as_number
-    nullptr, // tp_as_sequence
-    nullptr, // tp_as_mapping
-    nullptr, // tp_hash
-    nullptr, // tp_call
-    nullptr, // tp_str
-    PyObject_GenericGetAttr,
-    nullptr, // tp_setattro
-    nullptr, // tp_as_buffer
-    Py_TPFLAGS_DEFAULT,
-    nullptr, // tp_doc
-    Dtool_StaticProperty_traverse,
-    nullptr, // tp_clear
-    nullptr, // tp_richcompare
-    0, // tp_weaklistoffset
-    nullptr, // tp_iter
-    nullptr, // tp_iternext
-    nullptr, // tp_methods
-    nullptr, // tp_members
-    nullptr, // tp_getset
-    nullptr, // tp_base
-    nullptr, // tp_dict
-    (descrgetfunc)Dtool_StaticProperty_get,
-    (descrsetfunc)Dtool_StaticProperty_set,
-    0, // tp_dictoffset
-    nullptr, // tp_init
-    nullptr, // tp_alloc
-    nullptr, // tp_new
-    nullptr, // tp_free
-    nullptr, // tp_is_gc
-    nullptr, // tp_bases
-    nullptr, // tp_mro
-    nullptr, // tp_cache
-    nullptr, // tp_subclasses
-    nullptr, // tp_weaklist
-    nullptr, // tp_del
-    0, // tp_version_tag,
-#if PY_VERSION_HEX >= 0x03040000
-    nullptr, // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    nullptr, // tp_vectorcall
-#endif
+  static PyType_Slot wrapper_slots[] = {
+    {Py_tp_dealloc, (void *)&Dtool_StaticProperty_dealloc},
+    {Py_tp_repr, (void *)&Dtool_StaticProperty_repr},
+    {Py_tp_traverse, (void *)&Dtool_StaticProperty_traverse},
+    {Py_tp_descr_get, (void *)&Dtool_StaticProperty_get},
+    {Py_tp_descr_set, (void *)&Dtool_StaticProperty_set},
+    {0, nullptr},
   };
 
-  if (PyType_Ready(&wrapper_type) < 0) {
-    return nullptr;
-  }
+  static PyType_Spec wrapper_spec = {
+    "_interrogate_static_property",
+    sizeof(PyGetSetDescrObject),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+    wrapper_slots,
+  };
 
-  PyGetSetDescrObject *descr;
-  descr = (PyGetSetDescrObject *)PyType_GenericAlloc(&wrapper_type, 0);
+  PyObject *wrapper_type = _init_wrapper_type(wrapper_spec);
+  nassertr_always(wrapper_type != nullptr, nullptr);
+
+  PyGetSetDescrObject *descr = PyObject_New(PyGetSetDescrObject, (PyTypeObject *)wrapper_type);
   if (descr != nullptr) {
     Py_XINCREF(type);
     descr->d_getset = (PyGetSetDef *)getset;
