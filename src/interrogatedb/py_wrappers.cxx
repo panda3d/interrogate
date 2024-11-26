@@ -588,7 +588,7 @@ static PyObject *Dtool_MappingWrapper_keys(PyObject *self, PyObject *) {
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_mapping_wrapper_keys",
+    "sys._interrogate_mapping_wrapper_keys",
     sizeof(Dtool_MappingWrapper),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
@@ -664,7 +664,7 @@ static PyObject *Dtool_MappingWrapper_values(PyObject *self, PyObject *) {
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_mapping_wrapper_values",
+    "sys._interrogate_mapping_wrapper_values",
     sizeof(Dtool_MappingWrapper),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
@@ -749,7 +749,7 @@ static PyObject *Dtool_MappingWrapper_items(PyObject *self, PyObject *) {
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_mapping_wrapper_items",
+    "sys._interrogate_mapping_wrapper_items",
     sizeof(Dtool_MappingWrapper),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
@@ -1068,7 +1068,7 @@ Dtool_SequenceWrapper *Dtool_NewSequenceWrapper(PyObject *self, const char *name
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_sequence_wrapper",
+    "sys._interrogate_sequence_wrapper",
     sizeof(Dtool_SequenceWrapper),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
@@ -1118,7 +1118,7 @@ Dtool_MutableSequenceWrapper *Dtool_NewMutableSequenceWrapper(PyObject *self, co
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_mutable_sequence_wrappes",
+    "sys._interrogate_mutable_sequence_wrappes",
     sizeof(Dtool_MutableSequenceWrapper),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
@@ -1165,7 +1165,7 @@ Dtool_MappingWrapper *Dtool_NewMappingWrapper(PyObject *self, const char *name) 
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_mapping_wrapper",
+    "sys._interrogate_mapping_wrapper",
     sizeof(Dtool_MappingWrapper),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
@@ -1218,7 +1218,7 @@ Dtool_MappingWrapper *Dtool_NewMutableMappingWrapper(PyObject *self, const char 
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_mutable_mapping_wrapper",
+    "sys._interrogate_mutable_mapping_wrapper",
     sizeof(Dtool_MappingWrapper),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
@@ -1254,7 +1254,7 @@ Dtool_NewGenerator(PyObject *self, iternextfunc gen_next) {
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_generator_wrapper",
+    "sys._interrogate_generator_wrapper",
     sizeof(Dtool_GeneratorWrapper),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
@@ -1288,7 +1288,7 @@ Dtool_NewStaticProperty(PyTypeObject *type, const PyGetSetDef *getset) {
   };
 
   static PyType_Spec wrapper_spec = {
-    "_interrogate_static_property",
+    "sys._interrogate_static_property",
     sizeof(PyGetSetDescrObject),
     0,
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
