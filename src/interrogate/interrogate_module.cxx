@@ -43,6 +43,7 @@ bool build_python_wrappers = false;
 bool build_python_native_wrappers = false;
 bool track_interpreter = false;
 vector_string imports;
+vector_string init_funcs;
 
 // Short command-line options.
 static const char *short_options = "";
@@ -57,6 +58,7 @@ enum CommandOptions {
   CO_python_native,
   CO_track_interpreter,
   CO_import,
+  CO_init,
 };
 
 static struct option long_options[] = {
@@ -68,6 +70,7 @@ static struct option long_options[] = {
   { "python-native", no_argument, nullptr, CO_python_native },
   { "track-interpreter", no_argument, nullptr, CO_track_interpreter },
   { "import", required_argument, nullptr, CO_import },
+  { "init", required_argument, nullptr, CO_init },
   { nullptr }
 };
 
@@ -286,6 +289,10 @@ int write_python_table_native(std::ostream &out) {
     }
   }
 
+  for (auto &init : init_funcs) {
+    out << "extern \"C\" void " << init << "();\n";
+  }
+
   vector_string::const_iterator ii;
   for (ii = libraries.begin(); ii != libraries.end(); ++ii) {
     printf("Referencing Library %s\n", (*ii).c_str());
@@ -347,6 +354,10 @@ int write_python_table_native(std::ostream &out) {
       << "  PyObject *module = Dtool_PyModuleInitHelper(defs, &py_" << library_name << "_module);\n"
       << "  if (module != nullptr) {\n";
 
+  for (auto &init : init_funcs) {
+    out << "    " << init << "();\n";
+  }
+
   for (ii = libraries.begin(); ii != libraries.end(); ii++) {
     out << "    Dtool_" << *ii << "_BuildInstants(module);\n";
   }
@@ -382,6 +393,10 @@ int write_python_table_native(std::ostream &out) {
       << "\n"
       << "  PyObject *module = Dtool_PyModuleInitHelper(defs, \"" << module_name << "\");\n"
       << "  if (module != nullptr) {\n";
+
+  for (auto &init : init_funcs) {
+    out << "    " << init << "();\n";
+  }
 
   for (ii = libraries.begin(); ii != libraries.end(); ii++) {
     out << "    Dtool_" << *ii << "_BuildInstants(module);\n";
@@ -552,6 +567,10 @@ int main(int argc, char *argv[]) {
 
     case CO_import:
       imports.push_back(optarg);
+      break;
+
+    case CO_init:
+      init_funcs.push_back(optarg);
       break;
 
     default:
