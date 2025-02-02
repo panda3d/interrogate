@@ -14,6 +14,7 @@
 #include "textEncoder.h"
 #include "stringDecoder.h"
 #include "unicodeLatinMap.h"
+#include <cstdint>
 
 using std::istream;
 using std::ostream;
