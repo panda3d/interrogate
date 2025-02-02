@@ -17,6 +17,7 @@
 #include "dtoolbase.h"
 
 #include <string>
+#include <cstdint>
 #include "vector_string.h"
 #include "pdtoa.h"
 
