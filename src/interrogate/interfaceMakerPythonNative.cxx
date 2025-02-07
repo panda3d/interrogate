@@ -7355,12 +7355,7 @@ write_getset(ostream &out, Object *obj, Property *property) {
         }
         out << "    return 0;\n";
       } else {
-        out << "#ifdef NDEBUG\n"
-               "    Dtool_Raise_TypeError(\"can't delete attribute\");\n"
-               "#else\n"
-               "    Dtool_Raise_TypeError(\"can't delete " << ielem.get_name() << "[] attribute\");\n"
-               "#endif\n"
-               "    return -1;\n";
+        out << "    return Dtool_Raise_CantDeleteAttributeError(\"" << ielem.get_name() << "[]\");\n";
       }
       out << "  }\n";
 
@@ -7525,12 +7520,7 @@ write_getset(ostream &out, Object *obj, Property *property) {
           out << "    return -1;\n";
         }
       } else {
-        out << "#ifdef NDEBUG\n"
-               "    Dtool_Raise_TypeError(\"can't delete attribute\");\n"
-               "#else\n"
-               "    Dtool_Raise_TypeError(\"can't delete " << ielem.get_name() << "[] attribute\");\n"
-               "#endif\n"
-               "    return -1;\n";
+        out << "    return Dtool_Raise_CantDeleteAttributeError(\"" << ielem.get_name() << "[]\");\n";
       }
       out << "  }\n";
 
@@ -7763,12 +7753,7 @@ write_getset(ostream &out, Object *obj, Property *property) {
         out << "    " << cClassName << "::" << property->_deleter->_ifunc.get_name() << "();\n"
             << "    return 0;\n";
       } else {
-        out << "#ifdef NDEBUG\n"
-               "    Dtool_Raise_TypeError(\"can't delete attribute\");\n"
-               "#else\n"
-               "    Dtool_Raise_TypeError(\"can't delete " << ielem.get_name() << " attribute\");\n"
-               "#endif\n"
-               "    return -1;\n";
+        out << "    return Dtool_Raise_CantDeleteAttributeError(\"" << ielem.get_name() << "\");\n";
       }
       out << "  }\n";
 

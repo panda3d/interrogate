@@ -210,6 +210,24 @@ PyObject *Dtool_Raise_AttributeError(PyObject *obj, const char *attribute) {
 }
 
 /**
+ * Raises a TypeError of the form: can't delete attr attribute
+ *
+ * Always returns -1 so that it can be conveniently used as a return
+ * expression for wrapper functions that return an int.
+ */
+int Dtool_Raise_CantDeleteAttributeError(const char *attribute) {
+#if PY_MAJOR_VERSION >= 3
+  PyObject *message = PyUnicode_FromFormat(
+#else
+  PyObject *message = PyString_FromFormat(
+#endif
+    "can't delete %s attribute", attribute);
+
+  PyErr_SetObject(PyExc_TypeError, message);
+  return -1;
+}
+
+/**
  * Raises a TypeError of the form: Arguments must match: <list of overloads>
  *
  * However, in release builds, this instead is defined to a function that just
