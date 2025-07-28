@@ -627,6 +627,11 @@ record_function(const InterrogateType &itype, FunctionIndex func_index) {
           func->_flags |= remap->_flags;
           func->_args_type = (ArgsType)((int)func->_args_type | (int)remap->_args_type);
 
+          if (remap->_ForcedVoidReturn) {
+            // We don't generate wrappers if we don't understand the return type.
+            continue;
+          }
+
           // Make a wrapper for the function.
           FunctionWrapperIndex wrapper_index =
             remap->make_wrapper_entry(func_index);
