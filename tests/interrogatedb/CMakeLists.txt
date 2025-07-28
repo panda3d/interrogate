@@ -15,7 +15,7 @@ function(idb_test file)
     COMMAND ${CMAKE_COMMAND}
             "-DOUTPUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/${name}.gen.in"
             "-DEXPECTED_FILE=${CMAKE_CURRENT_SOURCE_DIR}/${name}.in"
-            "-DCOMMAND=${PROJECT_BINARY_DIR}/bin/interrogate ${extra_args} -od \"${CMAKE_CURRENT_BINARY_DIR}/${name}.gen.in\" -oc \"${CMAKE_CURRENT_BINARY_DIR}/${name}.gen.cxx\" \"-S${PROJECT_SOURCE_DIR}/parser-inc\" \"${CMAKE_CURRENT_SOURCE_DIR}/${file}\""
+            "-DCOMMAND=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interrogate ${extra_args} -od \"${CMAKE_CURRENT_BINARY_DIR}/${name}.gen.in\" -oc \"${CMAKE_CURRENT_BINARY_DIR}/${name}.gen.cxx\" \"-S${PROJECT_SOURCE_DIR}/parser-inc\" \"${CMAKE_CURRENT_SOURCE_DIR}/${file}\""
             -P "${PROJECT_SOURCE_DIR}/cmake/scripts/CompareCommand.cmake"
   )
 endfunction()
