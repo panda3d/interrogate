@@ -6,7 +6,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "panda3d-interrogate"
-version = "0.5.1"
+version = "0.6.0"
 description = "Binding generator designed for Panda3D"
 readme = "README.md"
 requires-python = ">=3.2"
