@@ -966,6 +966,53 @@ static PyObject *Dtool_MutableMappingWrapper_update(PyObject *self, PyObject *ar
 }
 
 /**
+ * "send" method, accepts only None.
+ */
+static PyObject *Dtool_GeneratorWrapper_send(PyObject *self, PyObject *arg) {
+  Dtool_GeneratorWrapper *wrap = (Dtool_GeneratorWrapper *)self;
+  nassertr(wrap, nullptr);
+  nassertr(wrap->_iternext_func, nullptr);
+  if (arg == Py_None) {
+    return wrap->_iternext_func(wrap->_base._self);
+  } else {
+    return Dtool_Raise_TypeError("can't send non-None value to a just-started generator");
+  }
+}
+
+/**
+ * "throw" method, simply re-raises exception.
+ */
+static PyObject *Dtool_GeneratorWrapper_throw(PyObject *self, PyObject *args) {
+  Dtool_GeneratorWrapper *wrap = (Dtool_GeneratorWrapper *)self;
+  nassertr(wrap, nullptr);
+
+  Py_ssize_t nargs = PyTuple_GET_SIZE(args);
+  if (nargs < 1 || nargs > 3) {
+    return PyErr_Format(PyExc_TypeError, "throw() takes 1, 2 or 3 arguments");
+  }
+
+  PyObject *exc_type = PyTuple_GET_ITEM(args, 0);
+  PyObject *exc_val = (nargs >= 2) ? PyTuple_GET_ITEM(args, 1) : nullptr;
+  PyObject *exc_tb = (nargs >= 3) ? PyTuple_GET_ITEM(args, 2) : nullptr;
+  if (exc_val == nullptr && exc_tb == nullptr && PyExceptionInstance_Check(exc_type)) {
+    // We were just given an exception instance.
+#if PY_VERSION_HEX >= 0x030C0000 // 3.12
+    Py_INCREF(exc_type);
+    PyErr_SetRaisedException(exc_type);
+    return nullptr;
+#else
+    exc_val = exc_type;
+    exc_type = (PyObject *)Py_TYPE(exc_val);
+#endif
+  }
+  Py_XINCREF(exc_type);
+  Py_XINCREF(exc_val);
+  Py_XINCREF(exc_tb);
+  PyErr_Restore(exc_type, exc_val, exc_tb);
+  return nullptr;
+}
+
+/**
  * This variant defines only a generator interface.
  */
 static PyObject *Dtool_GeneratorWrapper_iternext(PyObject *self) {
@@ -1246,11 +1293,18 @@ Dtool_MappingWrapper *Dtool_NewMutableMappingWrapper(PyObject *self, const char 
  */
 PyObject *
 Dtool_NewGenerator(PyObject *self, iternextfunc gen_next) {
+  static PyMethodDef methods[] = {
+    {"send", &Dtool_GeneratorWrapper_send, METH_O, nullptr},
+    {"throw", &Dtool_GeneratorWrapper_throw, METH_VARARGS, nullptr},
+    {nullptr, nullptr, 0, nullptr}
+  };
+
   static PyType_Slot wrapper_slots[] = {
     {Py_tp_dealloc, (void *)&Dtool_WrapperBase_dealloc},
     {Py_tp_repr, (void *)&Dtool_SequenceWrapper_repr},
     {Py_tp_iter, (void *)&PyObject_SelfIter},
     {Py_tp_iternext, (void *)&Dtool_GeneratorWrapper_iternext},
+    {Py_tp_methods, (void *)methods},
     {0, nullptr},
   };
 
