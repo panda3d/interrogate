@@ -3628,6 +3628,8 @@ write_module_class(ostream &out, Object *obj) {
     }
   }
 
+  bool wrote_enum_prep_code = false;
+
   // Build type dictionary.  The size is just an estimation.
   if (num_dict_items > 5) {
     out << "    PyObject *dict = _PyDict_NewPresized(" << num_dict_items << ");\n";
@@ -3685,6 +3687,20 @@ write_module_class(ostream &out, Object *obj) {
       string class_name = nested_obj->_itype._cpptype->get_local_name(&parser);
       string safe_name = make_safe_name(class_name);
 
+      if (!wrote_enum_prep_code) {
+        wrote_enum_prep_code = true;
+
+        out << "#if PY_VERSION_HEX >= 0x03040000\n";
+        out << "    PyObject *enum_module = PyImport_ImportModule(\"enum\");\n";
+        out << "    PyObject *enum_meta = PyObject_GetAttrString(enum_module, \"EnumMeta\");\n";
+        out << "    PyObject *enum_class = PyObject_GetAttrString(enum_module, \"Enum\");\n";
+        out << "    Py_DECREF(enum_module);\n";
+        out << "    PyObject *enum_create = PyObject_GetAttrString(enum_meta, \"_create_\");\n";
+        out << "    Py_DECREF(enum_meta);\n";
+        out << "    PyObject *module_name = PyUnicode_FromString(\"" << _def->module_name << "\");\n";
+        out << "#endif\n";
+      }
+
       int enum_count = nested_obj->_itype.number_of_enum_values();
       CPPType *underlying_type = TypeManager::unwrap_const(nested_obj->_itype._cpptype->as_enum_type()->get_underlying_type());
       string cast_to = underlying_type->get_local_name(&parser);
@@ -3706,9 +3722,16 @@ write_module_class(ostream &out, Object *obj) {
             << nested_obj->_itype.get_enum_value_name(xx) << "));\n"
                "      PyTuple_SET_ITEM(members, " << xx << ", member);\n";
       }
-      out << "      Dtool_Ptr_" << safe_name << " = Dtool_EnumType_Create(\""
+      out << "#if PY_VERSION_HEX >= 0x03040000\n"
+          << "      Dtool_Ptr_" << safe_name << " = (PyTypeObject *)PyObject_CallFunction("
+          << "enum_create, (char *)\"OsN\", enum_class, \""
+          << nested_obj->_itype.get_name() << "\", members);\n"
+          << "      PyObject_SetAttrString((PyObject *)Dtool_Ptr_" << safe_name << ", \"__module__\", module_name);\n"
+          << "#else\n"
+          << "      Dtool_Ptr_" << safe_name << " = Dtool_EnumType_Create(\""
           << nested_obj->_itype.get_name() << "\", members, \""
-          << _def->module_name << "\");\n";
+          << _def->module_name << "\");\n"
+          << "#endif\n";
       out << "      PyDict_SetItemString(dict, \"" << nested_obj->_itype.get_name()
           << "\", (PyObject *)Dtool_Ptr_" << safe_name << ");\n";
       out << "    }\n";
@@ -3735,6 +3758,14 @@ write_module_class(ostream &out, Object *obj) {
         }
       }
     }
+  }
+
+  if (wrote_enum_prep_code) {
+    out << "#if PY_VERSION_HEX >= 0x03040000\n";
+    out << "    Py_DECREF(enum_create);\n";
+    out << "    Py_DECREF(enum_class);\n";
+    out << "    Py_DECREF(module_name);\n";
+    out << "#endif\n";
   }
 
   // Also add the static properties, which can't be added via getset.
