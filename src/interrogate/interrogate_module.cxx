@@ -161,9 +161,6 @@ static bool print_dependent_types(const string &lib1, const string &lib2) {
 }
 
 int write_python_table_native(std::ostream &out) {
-  // Output the support code.
-  out << interrogate_preamble_python_native << "\n";
-
   int count = 0;
 
   std::map<string, std::set<string> > dependencies;
@@ -620,11 +617,33 @@ int main(int argc, char *argv[]) {
 
   // Now output the table.
   if (!output_code_filename.empty()) {
+    std::string output_buffer_str;
+    {
+      std::ostringstream output_buffer;
+
+      // Output the support code.
+      if (build_python_native_wrappers) {
+        output_buffer << interrogate_preamble_python_native << "\n";
+      }
+      output_buffer_str = output_buffer.str();
+    }
+
     std::ofstream output_code;
 
     if (!output_code_filename.open_write(output_code)) {
       nout << "Unable to write to " << output_code_filename << "\n";
     } else {
+      output_code << output_buffer_str;
+
+      if (build_python_native_wrappers) {
+        int lineno = 2;
+        for (char c : output_buffer_str) {
+          if (c == '\n') {
+            ++lineno;
+          }
+        }
+        output_code << "#line " << lineno << " \"" << output_code_filename << "\"\n";
+      }
 
       if (build_python_wrappers) {
         int count = write_python_table(output_code);
