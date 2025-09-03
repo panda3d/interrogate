@@ -324,7 +324,8 @@ ALWAYS_INLINE PyObject *Dtool_WrapValue(PyObject *value) {
   return value;
 }
 
-ALWAYS_INLINE PyObject *Dtool_WrapValue(const vector_uchar &value) {
+template<class Allocator>
+ALWAYS_INLINE PyObject *Dtool_WrapValue(const std::vector<unsigned char, Allocator> &value) {
 #if PY_MAJOR_VERSION >= 3
   return PyBytes_FromStringAndSize((char *)value.data(), (Py_ssize_t)value.size());
 #else

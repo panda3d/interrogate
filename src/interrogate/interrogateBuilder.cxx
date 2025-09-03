@@ -51,6 +51,9 @@
 #include <algorithm>
 #include <cstring>
 
+// This contains a big source string determined at compile time.
+extern const char interrogate_preamble_python_native_h[];
+
 using std::cerr;
 using std::istream;
 using std::map;
@@ -389,9 +392,7 @@ write_code(ostream &out_code,ostream * out_include, InterrogateModuleDef *def) {
   declaration_bodies << "#include <sstream>\n";
 
   if (build_python_native) {
-    declaration_bodies << "#include \"py_panda.h\"\n";
-    declaration_bodies << "#include \"extension.h\"\n";
-    declaration_bodies << "#include \"dcast.h\"\n";
+    declaration_bodies << interrogate_preamble_python_native_h << "\n";
   }
   declaration_bodies << "\n";
 

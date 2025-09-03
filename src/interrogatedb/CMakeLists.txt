@@ -29,10 +29,6 @@ set(INTERROGATEDB_IGATE
   interrogate_request.h
 )
 
-set(IGATERUNTIME_HEADERS
-  extension.h py_compat.h py_panda.h py_panda.I py_wrappers.h
-)
-
 composite_sources(interrogatedb INTERROGATEDB_SOURCES)
 add_library(interrogatedb
   ${INTERROGATEDB_HEADERS} ${INTERROGATEDB_SOURCES})
@@ -44,7 +40,6 @@ install(TARGETS interrogatedb
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/interrogatedb)
 install(FILES ${INTERROGATEDB_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/interrogatedb)
-install(FILES ${IGATERUNTIME_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/interrogatedb)
 
 # ALSO: This has an Interrogate binding! Take care of that if we want it.
 # Note we don't use the regular Interrogate macros; this has some custom flags

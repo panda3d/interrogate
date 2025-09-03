@@ -161,7 +161,8 @@ static bool print_dependent_types(const string &lib1, const string &lib2) {
 }
 
 int write_python_table_native(std::ostream &out) {
-  out << "#include \"py_panda.h\"\n\n";
+  // Output the support code.
+  out << interrogate_preamble_python_native << "\n";
 
   int count = 0;
 
@@ -632,9 +633,6 @@ int main(int argc, char *argv[]) {
 
       if (build_python_native_wrappers) {
         write_python_table_native(output_code);
-
-        // Output the support code.
-        output_code << interrogate_preamble_python_native << "\n";
       }
     }
   }

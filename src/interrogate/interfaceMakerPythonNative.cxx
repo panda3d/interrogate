@@ -861,7 +861,7 @@ InterfaceMakerPythonNative::
 void InterfaceMakerPythonNative::
 write_prototypes(ostream &out_code, ostream *out_h) {
   if (out_h != nullptr) {
-    *out_h << "#include \"py_panda.h\"\n\n";
+    //*out_h << "#include \"py_panda.h\"\n\n";
   }
 
   /*

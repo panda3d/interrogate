@@ -10,9 +10,7 @@
 #include <string>
 
 #include "pnotify.h"
-#include "vector_uchar.h"
 #include "register_type.h"
-#include "interrogate_request.h"
 
 #if defined(HAVE_PYTHON) && !defined(CPPPARSER)
 
@@ -343,7 +341,7 @@ struct LibraryDef {
   PyMethodDef *const _methods;
   const Dtool_TypeDef *const _types;
   Dtool_TypeDef *const _external_types;
-  const InterrogateModuleDef *const _module_def;
+  const struct InterrogateModuleDef *const _module_def;
 };
 
 #if PY_MAJOR_VERSION >= 3
@@ -408,7 +406,8 @@ ALWAYS_INLINE PyObject *Dtool_WrapValue(char value);
 ALWAYS_INLINE PyObject *Dtool_WrapValue(wchar_t value);
 ALWAYS_INLINE PyObject *Dtool_WrapValue(std::nullptr_t);
 ALWAYS_INLINE PyObject *Dtool_WrapValue(PyObject *value);
-ALWAYS_INLINE PyObject *Dtool_WrapValue(const vector_uchar &value);
+template<class Allocator>
+ALWAYS_INLINE PyObject *Dtool_WrapValue(const std::vector<unsigned char, Allocator> &value);
 
 #if PY_MAJOR_VERSION >= 0x02060000
 ALWAYS_INLINE PyObject *Dtool_WrapValue(Py_buffer *value);

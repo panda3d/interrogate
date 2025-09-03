@@ -51,47 +51,92 @@ set(INTERROGATE_SOURCES
   typeManager.cxx
 )
 
-set(INTERROGATE_PREAMBLE_PYTHON_NATIVE
+set(INTERROGATE_PREAMBLE_PYTHON_NATIVE_HEADERS
+  ../interrogatedb/py_panda.h
+  ../interrogatedb/py_panda.I
+  ../interrogatedb/py_compat.h
+  ../interrogatedb/py_wrappers.h
+  ../interrogatedb/extension.h
+)
+
+set(INTERROGATE_PREAMBLE_PYTHON_NATIVE_SOURCES
   ../interrogatedb/py_panda.cxx
   ../interrogatedb/py_compat.cxx
   ../interrogatedb/py_wrappers.cxx
   ../interrogatedb/dtool_super_base.cxx
 )
 
+# Python preamble for interrogate_module
+set(_preamble_sources)
+set(_preamble_headers)
+foreach(_file ${INTERROGATE_PREAMBLE_PYTHON_NATIVE_HEADERS})
+  # Resolve symlinks, use absolute path
+  get_filename_component(_file "${_file}" REALPATH)
+  list(APPEND _preamble_headers "${_file}")
+  list(APPEND _preamble_sources "${_file}")
+endforeach(_file)
+foreach(_file ${INTERROGATE_PREAMBLE_PYTHON_NATIVE_SOURCES})
+  # Resolve symlinks, use absolute path
+  get_filename_component(_file "${_file}" REALPATH)
+  list(APPEND _preamble_sources "${_file}")
+endforeach(_file)
+
+message(WARN "${_preamble_headers}")
+message(WARN "${_preamble_sources}")
+
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.h
+  COMMAND ${CMAKE_COMMAND}
+    -D OUTPUT_FILE="${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.h"
+    -D INPUT_FILES="${_preamble_headers}"
+    -D PREPEND_LINE_DIRECTIVE=YES
+    -D REPLACE_INCLUDES=YES
+    -P ${PROJECT_SOURCE_DIR}/cmake/scripts/MergeIncludes.cmake
+  DEPENDS ${_preamble_headers}
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx
+  COMMAND ${CMAKE_COMMAND}
+    -D OUTPUT_FILE="${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx"
+    -D INPUT_FILES="${_preamble_sources}"
+    -P ${PROJECT_SOURCE_DIR}/cmake/scripts/MergeIncludes.cmake
+  DEPENDS ${_preamble_sources} ${_preamble_headers}
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.h.cxx
+  COMMAND ${CMAKE_COMMAND}
+    -D OUTPUT_FILE="${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.h.cxx"
+    -D INPUT_FILES="${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.h"
+    -D SYMBOL_NAME="interrogate_preamble_python_native_h"
+    -D PREPEND_LINE_DIRECTIVE=YES
+    -D REPLACE_INCLUDES=YES
+    -P ${PROJECT_SOURCE_DIR}/cmake/scripts/ConcatenateToCXX.cmake
+  DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.h"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx.cxx
+  COMMAND ${CMAKE_COMMAND}
+    -D OUTPUT_FILE="${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx.cxx"
+    -D INPUT_FILES="${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx"
+    -D SYMBOL_NAME="interrogate_preamble_python_native"
+    -P ${PROJECT_SOURCE_DIR}/cmake/scripts/ConcatenateToCXX.cmake
+  DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
 composite_sources(interrogate INTERROGATE_SOURCES)
-add_executable(interrogate ${INTERROGATE_HEADERS} ${INTERROGATE_SOURCES})
+add_executable(interrogate ${INTERROGATE_SOURCES}
+  ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.h.cxx)
 target_link_libraries(interrogate cppParser interrogatedb)
 
 # parse_file utility
 add_executable(parse_file parse_file.cxx)
 target_link_libraries(parse_file cppParser)
 
-# Python preamble for interrogate_module
-set(_preamble_files)
-foreach(_file ${INTERROGATE_PREAMBLE_PYTHON_NATIVE})
-  # Resolve symlinks, use absolute path, and add a `#line 1 ...` directive
-  get_filename_component(_file "${_file}" REALPATH)
-
-  string(SHA1 _hash "${_file}")
-  set(_line_file "${CMAKE_CURRENT_BINARY_DIR}/.${_hash}.h")
-  file(WRITE "${_line_file}" "#line 1 \"${_file}\"\n")
-
-  list(APPEND _preamble_files "${_line_file}")
-  list(APPEND _preamble_files "${_file}")
-endforeach(_file)
-
-add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx
-  COMMAND ${CMAKE_COMMAND}
-    -D OUTPUT_FILE="${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx"
-    -D INPUT_FILES="${_preamble_files}"
-    -D SYMBOL_NAME="interrogate_preamble_python_native"
-    -P ${PROJECT_SOURCE_DIR}/cmake/scripts/ConcatenateToCXX.cmake
-  DEPENDS ${INTERROGATE_PREAMBLE_PYTHON_NATIVE}
-  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-
 add_executable(interrogate_module interrogate_module.cxx
-  ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx)
+  ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.cxx.cxx)
 target_link_libraries(interrogate_module cppParser interrogatedb)
 
 if(NOT CMAKE_CROSSCOMPILING)
@@ -124,5 +169,4 @@ if(SKBUILD)
   install(TARGETS interrogate_module COMPONENT tools DESTINATION interrogate_module)
 else()
   install(TARGETS interrogate interrogate_module COMPONENT tools DESTINATION ${CMAKE_INSTALL_BINDIR})
-  #install(FILES ${INTERROGATE_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/interrogate)
 endif()
