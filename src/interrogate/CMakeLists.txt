@@ -54,6 +54,8 @@ set(INTERROGATE_SOURCES
 set(INTERROGATE_PREAMBLE_PYTHON_NATIVE_HEADERS
   ../interrogatedb/py_panda.h
   ../interrogatedb/py_panda.I
+  ../interrogatedb/py_support.h
+  ../interrogatedb/py_support.I
   ../interrogatedb/py_compat.h
   ../interrogatedb/py_wrappers.h
   ../interrogatedb/extension.h
@@ -61,6 +63,7 @@ set(INTERROGATE_PREAMBLE_PYTHON_NATIVE_HEADERS
 
 set(INTERROGATE_PREAMBLE_PYTHON_NATIVE_SOURCES
   ../interrogatedb/py_panda.cxx
+  ../interrogatedb/py_support.cxx
   ../interrogatedb/py_compat.cxx
   ../interrogatedb/py_wrappers.cxx
   ../interrogatedb/dtool_super_base.cxx
@@ -80,9 +83,6 @@ foreach(_file ${INTERROGATE_PREAMBLE_PYTHON_NATIVE_SOURCES})
   get_filename_component(_file "${_file}" REALPATH)
   list(APPEND _preamble_sources "${_file}")
 endforeach(_file)
-
-message(WARN "${_preamble_headers}")
-message(WARN "${_preamble_sources}")
 
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/interrogate_preamble_python_native.h

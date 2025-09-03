@@ -53,7 +53,6 @@ EXPCL_PYPANDA Dtool_SequenceWrapper *Dtool_NewSequenceWrapper(PyObject *self, co
 EXPCL_PYPANDA Dtool_MutableSequenceWrapper *Dtool_NewMutableSequenceWrapper(PyObject *self, const char *name);
 EXPCL_PYPANDA Dtool_MappingWrapper *Dtool_NewMappingWrapper(PyObject *self, const char *name);
 EXPCL_PYPANDA Dtool_MappingWrapper *Dtool_NewMutableMappingWrapper(PyObject *self, const char *name);
-EXPCL_PYPANDA PyObject *Dtool_NewGenerator(PyObject *self, iternextfunc func);
 EXPCL_PYPANDA PyObject *Dtool_NewStaticProperty(PyTypeObject *obj, const PyGetSetDef *getset);
 
 #endif  // HAVE_PYTHON
