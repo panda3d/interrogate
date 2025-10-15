@@ -7128,7 +7128,8 @@ pack_return_value(ostream &out, int indent_level, FunctionRemap *remap,
     // Note, we don't check for NULL here any more.  This is now done by the
     // appropriate CreateInstance(Typed) function.
 
-    if (manage_reference_counts && TypeManager::is_pointer_to_base(orig_type)) {
+    if (owns_memory && manage_reference_counts &&
+        TypeManager::is_pointer_to_base(TypeManager::unwrap_reference(orig_type))) {
       // Use a trick to transfer the reference count to avoid a pair of
       // unnecessary ref() and unref() calls.  Ideally we'd use move
       // semantics, but py_panda.cxx cannot make use of PointerTo.
