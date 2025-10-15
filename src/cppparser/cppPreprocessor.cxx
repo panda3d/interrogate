@@ -2309,7 +2309,9 @@ get_literal(int token, YYLTYPE loc, const string &str, const YYSTYPE &value) {
         cmp_nocase(suffix, "l") == 0 ||
         cmp_nocase(suffix, "ul") == 0 || cmp_nocase(suffix, "lu") == 0 ||
         cmp_nocase(suffix, "ll") == 0 ||
-        cmp_nocase(suffix, "ull") == 0 || cmp_nocase(suffix, "llu") == 0) {
+        cmp_nocase(suffix, "ull") == 0 || cmp_nocase(suffix, "llu") == 0 ||
+        cmp_nocase(suffix, "z") == 0 ||
+        cmp_nocase(suffix, "uz") == 0 || cmp_nocase(suffix, "zu") == 0) {
       // These are built-in integer suffixes.  Right now, we don't try to
       // distinguish between them.
       return CPPToken(INTEGER, loc, str, value);
