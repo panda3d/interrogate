@@ -1662,7 +1662,7 @@ process_directive(int c) {
     handle_ifndef_directive(args, loc);
   } else if (command == "if") {
     handle_if_directive(args, loc);
-  } else if (command == "else" || command == "elif") {
+  } else if (command == "else" || command == "elif" || command == "elifdef" || command == "elifndef") {
     // Presumably this follows some #if or #ifdef.  We don't bother to check
     // this, however.
     skip_false_if_block(false);
@@ -1677,6 +1677,8 @@ process_directive(int c) {
     // Quietly ignore idents.
   } else if (command == "error") {
     handle_error_directive(args, loc);
+  } else if (command == "warning") {
+    handle_warning_directive(args, loc);
   } else {
     loc.first_line = begin_line;
     loc.first_column = begin_column;
@@ -1980,6 +1982,14 @@ handle_error_directive(const string &args, const YYLTYPE &loc) {
 }
 
 /**
+ *
+ */
+void CPPPreprocessor::
+handle_warning_directive(const string &args, const YYLTYPE &loc) {
+  warning(args, loc);
+}
+
+/**
  * We come here when we fail an #if or an #ifdef test, or when we reach the
  * #else clause to something we didn't fail.  This function skips all text up
  * until the matching #endif.
@@ -2019,6 +2029,18 @@ skip_false_if_block(bool consider_elifs) {
           // If we pass this test, we're in.
           _save_comments = true;
           handle_if_directive(args, loc);
+          return;
+        }
+      } else if (command == "elifdef") {
+        if (level == 0 && consider_elifs) {
+          _save_comments = true;
+          handle_ifdef_directive(args, loc);
+          return;
+        }
+      } else if (command == "elifndef") {
+        if (level == 0 && consider_elifs) {
+          _save_comments = true;
+          handle_ifndef_directive(args, loc);
           return;
         }
       } else if (command == "endif") {

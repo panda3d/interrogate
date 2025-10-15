@@ -146,6 +146,7 @@ private:
   void handle_include_directive(const std::string &args, const YYLTYPE &loc);
   void handle_pragma_directive(const std::string &args, const YYLTYPE &loc);
   void handle_error_directive(const std::string &args, const YYLTYPE &loc);
+  void handle_warning_directive(const std::string &args, const YYLTYPE &loc);
 
   void skip_false_if_block(bool consider_elifs);
   bool is_manifest_defined(const std::string &manifest_name) const;

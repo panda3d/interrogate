@@ -7,6 +7,7 @@ function(parse_test file)
   add_test(NAME ${name} COMMAND parse_file -T ${extra_args} "-S${PROJECT_SOURCE_DIR}/parser-inc" "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
 endfunction()
 
+parse_test(conditional.c)
 parse_test(literals.c)
 parse_test(recursive_macros.c)
 parse_test(stat.c)
