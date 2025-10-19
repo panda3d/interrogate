@@ -39,7 +39,7 @@ interrogate = "python/interrogate"
 interrogate_module = "python/interrogate_module"
 
 [tool.cibuildwheel]
-build = "cp38-* cp313t-*"
+build = "cp38-* cp313t-* cp314t-*"
 free-threaded-support = true
 
 [tool.cibuildwheel.linux]
