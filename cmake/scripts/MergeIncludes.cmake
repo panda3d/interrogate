@@ -8,7 +8,7 @@
 #   cmake -D OUTPUT_FILE="out.cxx" -D INPUT_FILES="a.h b.h" -P MergeIncludes.cmake
 #
 
-cmake_minimum_required(VERSION 3.5..3.10)
+cmake_minimum_required(VERSION 3.5...3.10)
 
 if(NOT CMAKE_SCRIPT_MODE_FILE)
   message(FATAL_ERROR "MergeIncludes.cmake should not be included but run in script mode.")
