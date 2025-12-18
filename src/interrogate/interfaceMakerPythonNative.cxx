@@ -2080,15 +2080,7 @@ write_module_class(ostream &out, Object *obj) {
   }
 
   std::vector<CPPType*> bases;
-  for (di = 0; di < num_derivations; di++) {
-    TypeIndex d_type_Index = obj->_itype.get_derivation(di);
-    if (!interrogate_type_is_unpublished(d_type_Index)) {
-      const InterrogateType &d_itype = idb->get_type(d_type_Index);
-      if (is_cpp_type_legal(d_itype._cpptype)) {
-        bases.push_back(d_itype._cpptype);
-      }
-    }
-  }
+  get_legal_bases(obj->_itype, bases);
 
   {
     SlottedFunctions::iterator rfi;
@@ -8161,6 +8153,27 @@ is_cpp_type_legal(CPPType *in_ctype) {
 
   return false;
 }
+
+/**
+ * Returns a list of base classes.  If one of the base classes is illegal,
+ * uses that class' bases.
+ */
+void InterfaceMakerPythonNative::
+get_legal_bases(const InterrogateType &itype, std::vector<CPPType*> &result) {
+  int num_derivations = itype.number_of_derivations();
+  for (int di = 0; di < num_derivations; ++di) {
+    TypeIndex d_type_Index = itype.get_derivation(di);
+
+    InterrogateDatabase *idb = InterrogateDatabase::get_ptr();
+    const InterrogateType &d_itype = idb->get_type(d_type_Index);
+    if (!interrogate_type_is_unpublished(d_type_Index) && is_cpp_type_legal(d_itype._cpptype)) {
+      result.push_back(d_itype._cpptype);
+    } else {
+      get_legal_bases(d_itype, result);
+    }
+  }
+}
+
 /**
 
  */

@@ -196,6 +196,7 @@ public:
   bool is_remap_coercion_possible(FunctionRemap *remap);
   bool is_function_legal(Function *func);
   bool is_cpp_type_legal(CPPType *ctype);
+  void get_legal_bases(const InterrogateType &itype, std::vector<CPPType*> &result);
   bool isExportThisRun(CPPType *ctype);
   bool isExportThisRun(Function *func);
   bool isFunctionWithThis( Function *func);

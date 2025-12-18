@@ -2587,6 +2587,25 @@ define_struct_type(InterrogateType &itype, CPPStructType *cpptype,
   if (TypeManager::involves_unpublished(cpptype)) {
     itype._flags &= ~InterrogateType::F_fully_defined;
     itype._flags |= InterrogateType::F_unpublished;
+
+    // However, we still must record its base classes, so that we can record
+    // the full type hierarchy where an intermediate type is not published.
+    if (itype._derivations.empty()) {
+      for (const CPPStructType::Base &base : cpptype->_derivation) {
+        if (base._vis <= V_public) {
+          CPPType *base_type = TypeManager::resolve_type(base._base, cpptype->_scope);
+          TypeIndex base_index = get_type(base_type, false);
+          if (base_index != 0) {
+            InterrogateType::Derivation d;
+            d._flags = 0;
+            d._base = base_index;
+            d._upcast = 0;
+            d._downcast = 0;
+            itype._derivations.push_back(d);
+          }
+        }
+      }
+    }
     return;
   }
   if (TypeManager::involves_protected(cpptype)) {
