@@ -1,0 +1,131 @@
+0
+3 3
+0 4 AAAA 0 
+14
+15 10 get_member 0 20 30 31 Parent::InlineChild::get_member 1 5 0 43
+getter for int Parent::InlineChild::member;
+48
+int Parent::InlineChild::get_member(void) const;
+
+16 10 set_member 0 36 30 31 Parent::InlineChild::set_member 1 6 0 43
+setter for int Parent::InlineChild::member;
+48
+void Parent::InlineChild::set_member(int value);
+
+17 11 InlineChild 0 260 30 32 Parent::InlineChild::InlineChild 2 3 4 0 0
+136
+inline Parent::InlineChild::InlineChild(void) = default;
+inline Parent::InlineChild::InlineChild(Parent::InlineChild const &) = default;
+
+18 12 ~InlineChild 0 516 30 33 Parent::InlineChild::~InlineChild 0 0 0
+40
+Parent::InlineChild::~InlineChild(void);
+
+19 10 get_member 0 20 32 34 Parent::OutOfLineChild::get_member 1 9 0 46
+getter for int Parent::OutOfLineChild::member;
+51
+int Parent::OutOfLineChild::get_member(void) const;
+
+20 10 set_member 0 36 32 34 Parent::OutOfLineChild::set_member 1 10 0 46
+setter for int Parent::OutOfLineChild::member;
+51
+void Parent::OutOfLineChild::set_member(int value);
+
+21 14 OutOfLineChild 0 260 32 38 Parent::OutOfLineChild::OutOfLineChild 2 7 8 0 0
+151
+inline Parent::OutOfLineChild::OutOfLineChild(void) = default;
+inline Parent::OutOfLineChild::OutOfLineChild(Parent::OutOfLineChild const &) = default;
+
+22 15 ~OutOfLineChild 0 516 32 39 Parent::OutOfLineChild::~OutOfLineChild 0 0 0
+46
+Parent::OutOfLineChild::~OutOfLineChild(void);
+
+23 10 get_member 0 20 33 46 Parent::ForwardDeclaredInlineChild::get_member 1 13 0 58
+getter for int Parent::ForwardDeclaredInlineChild::member;
+63
+int Parent::ForwardDeclaredInlineChild::get_member(void) const;
+
+24 10 set_member 0 36 33 46 Parent::ForwardDeclaredInlineChild::set_member 1 14 0 58
+setter for int Parent::ForwardDeclaredInlineChild::member;
+63
+void Parent::ForwardDeclaredInlineChild::set_member(int value);
+
+25 26 ForwardDeclaredInlineChild 0 260 33 62 Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild 2 11 12 0 0
+211
+inline Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild(void) = default;
+inline Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild(Parent::ForwardDeclaredInlineChild const &) = default;
+
+26 27 ~ForwardDeclaredInlineChild 0 516 33 63 Parent::ForwardDeclaredInlineChild::~ForwardDeclaredInlineChild 0 0 0
+70
+Parent::ForwardDeclaredInlineChild::~ForwardDeclaredInlineChild(void);
+
+27 6 Parent 0 260 29 14 Parent::Parent 2 1 2 0 0
+87
+inline Parent::Parent(void) = default;
+inline Parent::Parent(Parent const &) = default;
+
+28 7 ~Parent 0 516 29 15 Parent::~Parent 0 0 0
+22
+Parent::~Parent(void);
+
+14
+1 12 _inCAAAAuhpT 0 3 27 34 28 9 cAAAAuhpT 0 0 
+2 12 _inCAAAA1u17 0 11 27 34 28 9 cAAAA1u17 0 1 6 param0 0 35  
+3 12 _inCAAAAIh3A 0 3 17 37 18 9 cAAAAIh3A 0 0 
+4 12 _inCAAAAFaD_ 0 11 17 37 18 9 cAAAAFaD_ 0 1 6 param0 0 38  
+5 12 _inCAAAA8m_4 0 2 15 31 0 9 cAAAA8m_4 0 1 4 this 3 38  
+6 12 _inCAAAAxZqh 0 0 16 40 0 9 cAAAAxZqh 0 2 4 this 3 37  5 value 1 31  
+7 12 _inCAAAAtRjN 0 3 21 41 22 9 cAAAAtRjN 0 0 
+8 12 _inCAAAAMkf6 0 11 21 41 22 9 cAAAAMkf6 0 1 6 param0 0 42  
+9 12 _inCAAAA3_QQ 0 2 19 31 0 9 cAAAA3_QQ 0 1 4 this 3 42  
+10 12 _inCAAAAdj2I 0 0 20 40 0 9 cAAAAdj2I 0 2 4 this 3 41  5 value 1 31  
+11 12 _inCAAAAmzj5 0 3 25 44 26 9 cAAAAmzj5 0 0 
+12 12 _inCAAAArnMy 0 11 25 44 26 9 cAAAArnMy 0 1 6 param0 0 45  
+13 12 _inCAAAA83Xj 0 2 23 31 0 9 cAAAA83Xj 0 1 4 this 3 45  
+14 12 _inCAAAAd_2o 0 0 24 40 0 9 cAAAAd_2o 0 2 4 this 3 44  5 value 1 31  
+18
+29 6 Parent 0 140289 6 Parent 6 Parent 0 0 0 1 27 28 0 0 0 0 0 0 3 30 32 33 0
+
+30 11 InlineChild 0 402433 19 Parent::InlineChild 19 Parent::InlineChild 29 0 0 1 17 18 1 47 0 0 0 0 0 0 0
+
+31 3 int 0 8194 3 int 3 int 0 1 0 0 0 0 0 0 0 0 0 0 0
+
+32 14 OutOfLineChild 0 402433 22 Parent::OutOfLineChild 22 Parent::OutOfLineChild 29 0 0 1 21 22 1 48 0 0 0 0 0 0 0
+
+33 26 ForwardDeclaredInlineChild 0 402433 34 Parent::ForwardDeclaredInlineChild 34 Parent::ForwardDeclaredInlineChild 29 0 0 1 25 26 1 49 0 0 0 0 0 0 0
+
+34 8 Parent * 0 8576 8 Parent * 8 Parent * 0 0 29 0 0 0 0 0 0 0 0 0 0
+
+35 14 Parent const * 0 8576 14 Parent const * 14 Parent const * 0 0 36 0 0 0 0 0 0 0 0 0 0
+
+36 12 Parent const 0 8832 12 Parent const 12 Parent const 0 0 29 0 0 0 0 0 0 0 0 0 0
+
+37 13 InlineChild * 0 8576 21 Parent::InlineChild * 21 Parent::InlineChild * 0 0 30 0 0 0 0 0 0 0 0 0 0
+
+38 19 InlineChild const * 0 8576 27 Parent::InlineChild const * 27 Parent::InlineChild const * 0 0 39 0 0 0 0 0 0 0 0 0 0
+
+39 17 InlineChild const 0 8832 25 Parent::InlineChild const 25 Parent::InlineChild const 0 0 30 0 0 0 0 0 0 0 0 0 0
+
+40 4 void 0 8194 4 void 4 void 0 6 0 0 0 0 0 0 0 0 0 0 0
+
+41 16 OutOfLineChild * 0 8576 24 Parent::OutOfLineChild * 24 Parent::OutOfLineChild * 0 0 32 0 0 0 0 0 0 0 0 0 0
+
+42 22 OutOfLineChild const * 0 8576 30 Parent::OutOfLineChild const * 30 Parent::OutOfLineChild const * 0 0 43 0 0 0 0 0 0 0 0 0 0
+
+43 20 OutOfLineChild const 0 8832 28 Parent::OutOfLineChild const 28 Parent::OutOfLineChild const 0 0 32 0 0 0 0 0 0 0 0 0 0
+
+44 28 ForwardDeclaredInlineChild * 0 8576 36 Parent::ForwardDeclaredInlineChild * 36 Parent::ForwardDeclaredInlineChild * 0 0 33 0 0 0 0 0 0 0 0 0 0
+
+45 34 ForwardDeclaredInlineChild const * 0 8576 42 Parent::ForwardDeclaredInlineChild const * 42 Parent::ForwardDeclaredInlineChild const * 0 0 46 0 0 0 0 0 0 0 0 0 0
+
+46 32 ForwardDeclaredInlineChild const 0 8832 40 Parent::ForwardDeclaredInlineChild const 40 Parent::ForwardDeclaredInlineChild const 0 0 33 0 0 0 0 0 0 0 0 0 0
+
+0
+3
+47 6 member 0 6 31 15 16 0 0 0 0 0 0 27 Parent::InlineChild::member 0
+
+48 6 member 0 6 31 19 20 0 0 0 0 0 0 30 Parent::OutOfLineChild::member 0
+
+49 6 member 0 6 31 23 24 0 0 0 0 0 0 42 Parent::ForwardDeclaredInlineChild::member 0
+
+0

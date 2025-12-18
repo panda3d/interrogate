@@ -21,3 +21,4 @@ function(idb_test file)
 endfunction()
 
 idb_test(item_assignment.h)
+idb_test(nested_struct.h)

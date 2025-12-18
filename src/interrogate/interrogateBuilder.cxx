@@ -2723,10 +2723,34 @@ define_struct_type(InterrogateType &itype, CPPStructType *cpptype,
           if (nested_type->_ident != nullptr ||
               nested_type->as_enum_type() != nullptr) {
             TypeIndex nested_index = get_type(nested_type, false);
-            itype._nested_types.push_back(nested_index);
+            if (std::find(itype._nested_types.begin(), itype._nested_types.end(), nested_index) == itype._nested_types.end()) {
+              itype._nested_types.push_back(nested_index);
+            }
           }
         }
       }
+
+    } else if ((*di)->get_subtype() == CPPDeclaration::ST_extension) {
+      // Forward declaration.  Can we resolve this?
+      CPPType *type = (*di)->as_extension_type()->resolve_type(scope, &parser);
+
+      if ((*di)->_vis <= min_vis || in_forcetype(type->get_local_name(&parser))) {
+        if (type->as_struct_type() != nullptr ||
+            type->as_enum_type() != nullptr) {
+          CPPExtensionType *nested_type = type->as_extension_type();
+          assert(nested_type != nullptr);
+
+          // For now, we don't allow anonymous structs.
+          if (nested_type->_ident != nullptr ||
+              nested_type->as_enum_type() != nullptr) {
+            TypeIndex nested_index = get_type(nested_type, false);
+            if (std::find(itype._nested_types.begin(), itype._nested_types.end(), nested_index) == itype._nested_types.end()) {
+              itype._nested_types.push_back(nested_index);
+            }
+          }
+        }
+      }
+
     } else if ((*di)->get_subtype() == CPPDeclaration::ST_enum) {
       CPPType *type = (*di)->as_enum_type();
 

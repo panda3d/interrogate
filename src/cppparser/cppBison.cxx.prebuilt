@@ -7397,7 +7397,7 @@ yyreduce:
   CPPStructType *st = new CPPStructType((yyvsp[-2].u.extension_enum), (yyvsp[0].u.identifier), current_scope,
                                         new_scope, (yylsp[-2]).file, (yyvsp[-1].attr_list));
   new_scope->set_struct_type(st);
-  current_scope->define_extension_type(st);
+  scope->define_extension_type(st);
 
   push_scope(new_scope);
   push_struct(st);

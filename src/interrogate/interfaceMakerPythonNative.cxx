@@ -194,6 +194,12 @@ classNameFromCppName(const std::string &cppName, bool mangle) {
     } else if (badChars.find(*chr) != std::string::npos) {
       nextUscore = !mangle;
 
+    } else if (*chr == ':') {
+      if (!className.empty() && className.back() != '.') {
+        className += '.';
+      }
+      firstChar = firstChar || mangle;
+
     } else if (nextCap || firstChar) {
       className += toupper(*chr);
       nextCap = false;
@@ -1875,7 +1881,7 @@ write_module_class(ostream &out, Object *obj) {
 
   std::string ClassName = make_safe_name(obj->_itype.get_scoped_name());
   std::string cClassName =  obj->_itype.get_true_name();
-  std::string export_class_name = classNameFromCppName(obj->_itype.get_name(), false);
+  std::string export_class_name = classNameFromCppName(obj->_itype.get_scoped_name(), false);
 
   CPPStructType *struct_type = obj->_itype._cpptype->as_struct_type();
   bool py_subclassable = is_python_subclassable(struct_type);
@@ -3570,7 +3576,6 @@ write_module_class(ostream &out, Object *obj) {
   out << "  (void) module; // Unused\n";
   out << "  static bool initdone = false;\n";
   out << "  if (!initdone) {\n";
-  out << "    initdone = true;\n";
 
   // Add bases.
   out << "    // Dependent objects\n";
@@ -3592,7 +3597,16 @@ write_module_class(ostream &out, Object *obj) {
       }
     }
 
+    // Note that there may be a circular dependency.  The parent class may have
+    // inited us, so bail out now.
+    out << "    if (initdone) {\n"
+        << "      return;\n"
+        << "    }\n"
+        << "    initdone = true;\n";
+
     out << "    Dtool_" << ClassName << "._PyType.tp_bases = PyTuple_Pack(" << bases.size() << baseargs << ");\n";
+  } else {
+    out << "    initdone = true;\n";
   }
   out << "    Dtool_" << ClassName << "._PyType.tp_base = (PyTypeObject *)Dtool_GetSuperBase();\n";
 
@@ -3620,8 +3634,6 @@ write_module_class(ostream &out, Object *obj) {
     }
   }
 
-  bool wrote_enum_prep_code = false;
-
   // Build type dictionary.  The size is just an estimation.
   if (num_dict_items > 5) {
     out << "    PyObject *dict = _PyDict_NewPresized(" << num_dict_items << ");\n";
@@ -3631,7 +3643,67 @@ write_module_class(ostream &out, Object *obj) {
   out << "    Dtool_" << ClassName << "._PyType.tp_dict = dict;\n";
   out << "    PyDict_SetItemString(dict, \"DtoolClassDict\", dict);\n";
 
+  // Also add the static properties, which can't be added via getset.
+  for (Property *property : obj->_properties) {
+    const InterrogateElement &ielem = property->_ielement;
+    if (property->_getter_remaps.empty()) {
+      continue;
+    }
+    if (property->_has_this) {
+      // Actually, continue if we have a conflicting static method with the
+      // same name, which may still require use of Dtool_StaticProperty.
+      bool have_shadow = false;
+      for (const Function *func : obj->_methods) {
+        if (!func->_has_this && func->_ifunc.get_name() == ielem.get_name()) {
+          have_shadow = true;
+          break;
+        }
+      }
+      if (!have_shadow) {
+        continue;
+      }
+    }
+
+    string name1 = methodNameFromCppName(ielem.get_name(), "", false);
+    // string name2 = methodNameFromCppName(ielem.get_name(), "", true);
+
+    string getter = "&Dtool_" + ClassName + "_" + ielem.get_name() + "_Getter";
+    string setter = "nullptr";
+    if (!ielem.is_sequence() && !ielem.is_mapping() && !property->_setter_remaps.empty()) {
+      setter = "&Dtool_" + ClassName + "_" + ielem.get_name() + "_Setter";
+    }
+
+    out << "    static const PyGetSetDef def_" << name1 << " = {(char *)\"" << name1 << "\", " << getter << ", " << setter;
+
+    if (ielem.has_comment()) {
+      out << ", (char *)\n";
+      output_quoted(out, 4, ielem.get_comment());
+      out << ",\n    ";
+    } else {
+      out << ", nullptr, ";
+    }
+
+    // Extra void* argument; we don't make use of it.
+    out << "nullptr};\n";
+
+    out << "    PyDict_SetItemString(dict, \"" << name1 << "\", Dtool_NewStaticProperty(&Dtool_" << ClassName << "._PyType, &def_" << name1 << "));\n";
+    /* Alternative spelling:
+    out << "    PyDict_SetItemString(\"" << name2 << "\", &def_" << name1 << ");\n";
+    */
+  }
+
+  out << "    if (PyType_Ready((PyTypeObject *)&Dtool_" << ClassName << ") < 0) {\n"
+         "      PyErr_Print();\n"
+         "      PyErr_Format(PyExc_TypeError, \"PyType_Ready(%s)\", \"" << ClassName << "\");\n"
+         "      return;\n"
+         "    }\n"
+         "    Py_INCREF((PyTypeObject *)&Dtool_" << ClassName << ");\n";
+
   // Now go through the nested types again to actually add the dict items.
+  // We have to do this after readying the type since the PyModuleClassInit
+  // of the nested class may end up relying on the type object.
+  bool wrote_enum_prep_code = false;
+
   for (int ni = 0; ni < num_nested; ni++) {
     TypeIndex nested_index = obj->_itype.get_nested_type(ni);
     if (_objects.count(nested_index) == 0) {
@@ -3684,11 +3756,15 @@ write_module_class(ostream &out, Object *obj) {
 
         out << "#if PY_VERSION_HEX >= 0x03040000\n";
         out << "    PyObject *enum_module = PyImport_ImportModule(\"enum\");\n";
-        out << "    PyObject *enum_meta = PyObject_GetAttrString(enum_module, \"EnumMeta\");\n";
-        out << "    PyObject *enum_class = PyObject_GetAttrString(enum_module, \"Enum\");\n";
-        out << "    Py_DECREF(enum_module);\n";
-        out << "    PyObject *enum_create = PyObject_GetAttrString(enum_meta, \"_create_\");\n";
-        out << "    Py_DECREF(enum_meta);\n";
+        out << "    PyObject *enum_class = nullptr;\n";
+        out << "    PyObject *enum_create = nullptr;\n";
+        out << "    if (enum_module != nullptr) {\n";
+        out << "      PyObject *enum_meta = PyObject_GetAttrString(enum_module, \"EnumMeta\");\n";
+        out << "      enum_class = PyObject_GetAttrString(enum_module, \"Enum\");\n";
+        out << "      Py_DECREF(enum_module);\n";
+        out << "      enum_create = PyObject_GetAttrString(enum_meta, \"_create_\");\n";
+        out << "      Py_DECREF(enum_meta);\n";
+        out << "    }\n";
         out << "    PyObject *module_name = PyUnicode_FromString(\"" << _def->module_name << "\");\n";
         out << "#endif\n";
       }
@@ -3715,18 +3791,24 @@ write_module_class(ostream &out, Object *obj) {
                "      PyTuple_SET_ITEM(members, " << xx << ", member);\n";
       }
       out << "#if PY_VERSION_HEX >= 0x03040000\n"
-          << "      Dtool_Ptr_" << safe_name << " = (PyTypeObject *)PyObject_CallFunction("
+          << "      if (enum_create != nullptr) {\n"
+          << "        Dtool_Ptr_" << safe_name << " = (PyTypeObject *)PyObject_CallFunction("
           << "enum_create, (char *)\"OsN\", enum_class, \""
           << nested_obj->_itype.get_name() << "\", members);\n"
-          << "      PyObject_SetAttrString((PyObject *)Dtool_Ptr_" << safe_name << ", \"__module__\", module_name);\n"
+          << "        PyObject_SetAttrString((PyObject *)Dtool_Ptr_" << safe_name << ", \"__module__\", module_name);\n"
+          << "      } else {\n"
+          << "        Py_DECREF(members);\n"
+          << "      }\n"
           << "#else\n"
           << "      Dtool_Ptr_" << safe_name << " = Dtool_EnumType_Create(\""
           << nested_obj->_itype.get_name() << "\", members, \""
           << _def->module_name << "\");\n"
-          << "#endif\n";
-      out << "      PyDict_SetItemString(dict, \"" << nested_obj->_itype.get_name()
-          << "\", (PyObject *)Dtool_Ptr_" << safe_name << ");\n";
-      out << "    }\n";
+          << "#endif\n"
+          << "      if (Dtool_Ptr_" << safe_name << " != nullptr) {\n"
+          << "        PyDict_SetItemString(dict, \"" << nested_obj->_itype.get_name()
+          << "\", (PyObject *)Dtool_Ptr_" << safe_name << ");\n"
+          << "      }\n"
+          << "    }\n";
 
     } else if (nested_obj->_itype.is_enum()) {
       out << "    // enum " << nested_obj->_itype.get_scoped_name() << ";\n";
@@ -3754,67 +3836,11 @@ write_module_class(ostream &out, Object *obj) {
 
   if (wrote_enum_prep_code) {
     out << "#if PY_VERSION_HEX >= 0x03040000\n";
-    out << "    Py_DECREF(enum_create);\n";
-    out << "    Py_DECREF(enum_class);\n";
+    out << "    Py_XDECREF(enum_create);\n";
+    out << "    Py_XDECREF(enum_class);\n";
     out << "    Py_DECREF(module_name);\n";
     out << "#endif\n";
   }
-
-  // Also add the static properties, which can't be added via getset.
-  for (Property *property : obj->_properties) {
-    const InterrogateElement &ielem = property->_ielement;
-    if (property->_getter_remaps.empty()) {
-      continue;
-    }
-    if (property->_has_this) {
-      // Actually, continue if we have a conflicting static method with the
-      // same name, which may still require use of Dtool_StaticProperty.
-      bool have_shadow = false;
-      for (const Function *func : obj->_methods) {
-        if (!func->_has_this && func->_ifunc.get_name() == ielem.get_name()) {
-          have_shadow = true;
-          break;
-        }
-      }
-      if (!have_shadow) {
-        continue;
-      }
-    }
-
-    string name1 = methodNameFromCppName(ielem.get_name(), "", false);
-    // string name2 = methodNameFromCppName(ielem.get_name(), "", true);
-
-    string getter = "&Dtool_" + ClassName + "_" + ielem.get_name() + "_Getter";
-    string setter = "nullptr";
-    if (!ielem.is_sequence() && !ielem.is_mapping() && !property->_setter_remaps.empty()) {
-      setter = "&Dtool_" + ClassName + "_" + ielem.get_name() + "_Setter";
-    }
-
-    out << "    static const PyGetSetDef def_" << name1 << " = {(char *)\"" << name1 << "\", " << getter << ", " << setter;
-
-    if (ielem.has_comment()) {
-      out << ", (char *)\n";
-      output_quoted(out, 4, ielem.get_comment());
-      out << ",\n    ";
-    } else {
-      out << ", nullptr, ";
-    }
-
-    // Extra void* argument; we don't make use of it.
-    out << "nullptr};\n";
-
-    out << "    PyDict_SetItemString(dict, \"" << name1 << "\", Dtool_NewStaticProperty(&Dtool_" << ClassName << "._PyType, &def_" << name1 << "));\n";
-    /* Alternative spelling:
-    out << "    PyDict_SetItemString(\"" << name2 << "\", &def_" << name1 << ");\n";
-    */
-  }
-
-  out << "    if (PyType_Ready((PyTypeObject *)&Dtool_" << ClassName << ") < 0) {\n"
-         "      PyErr_Format(PyExc_TypeError, \"PyType_Ready(%s)\", \"" << ClassName << "\");\n"
-         "      return;\n"
-         "    }\n"
-         "    Py_INCREF((PyTypeObject *)&Dtool_" << ClassName << ");\n"
-         "  }\n";
 
 /*
  * Also write out the explicit alternate names.  int num_alt_names =
@@ -3825,7 +3851,7 @@ write_module_class(ostream &out, Object *obj) {
  * ".As_PyTypeObject());\n"; } }
  */
 
-  // out << "  }\n";
+  out << "  }\n";
   out << "}\n\n";
 }
 
