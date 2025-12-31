@@ -5129,6 +5129,7 @@ write_function_instance(ostream &out, FunctionRemap *remap,
   bool has_keywords = false;
   vector_string pexprs;
   LineStream extra_convert;
+  ostringstream extra_type_check;
   ostringstream extra_param_check;
   LineStream extra_cleanup;
   int min_version = 0;
@@ -5589,42 +5590,45 @@ write_function_instance(ostream &out, FunctionRemap *remap,
       only_pyobjects = false;
 
     } else if (TypeManager::is_size(type)) {
+      // There is no default format specifier mapping to size_t.
       if (args_type == AT_single_arg) {
+        param_name = "arg";
         type_check = "PyLongOrInt_Check(arg)";
+      } else {
+        indent(out, indent_level) << "PyObject *" << param_name << null_assign << ";\n";
+        if (is_optional) {
+          extra_type_check << " && (" << param_name << " == nullptr || PyLongOrInt_Check(" << param_name << "))";
+        } else {
+          extra_type_check << " && PyLongOrInt_Check(" << param_name << ")";
+        }
+        format_specifiers += "O";
+        parameter_list += ", &" + param_name;
+      }
+      expected_params += "int";
+      pexpr_string = param_name + "_val";
 
+      if (is_optional) {
         extra_convert <<
-          "size_t arg_val = PyLongOrInt_AsSize_t(arg);\n"
+          "size_t " << param_name << "_val" << default_expr << ";\n"
+          "if (" << param_name << " != nullptr) {\n"
+          "  " << param_name << "_val = PyLongOrInt_AsSize_t(" << param_name << ");\n"
           "#ifndef NDEBUG\n"
-          "if (arg_val == (size_t)-1 && PyErr_Occurred()) {\n";
+          "  if (" << param_name << "_val == (size_t)-1 && PyErr_Occurred()) {\n";
+        error_return(extra_convert, 5, return_flags);
+        extra_convert <<
+          "  }\n"
+          "#endif\n"
+          "}";
+      } else {
+        extra_convert <<
+          "size_t " << param_name << "_val = PyLongOrInt_AsSize_t(" << param_name << ");\n"
+          "#ifndef NDEBUG\n"
+          "if (" << param_name << "_val == (size_t)-1 && PyErr_Occurred()) {\n";
         error_return(extra_convert, 2, return_flags);
         extra_convert <<
           "}\n"
           "#endif\n";
-
-        pexpr_string = "arg_val";
-
-      } else {
-        // It certainly isn't the exact same thing as size_t, but Py_ssize_t
-        // should at least be the same size.  The problem with mapping this to
-        // unsigned int is that that doesn't work well on 64-bit systems, on
-        // which size_t is a 64-bit integer.
-        indent(out, indent_level) << "Py_ssize_t " << param_name << default_expr << ";\n";
-        format_specifiers += "n";
-        parameter_list += ", &" + param_name;
-
-        extra_convert
-          << "#ifndef NDEBUG\n"
-          << "if (" << param_name << " < 0) {\n";
-
-        error_raise_return(extra_convert, 2, return_flags, "OverflowError",
-                          "can't convert negative value %zd to size_t",
-                          param_name);
-        extra_convert
-          << "}\n"
-          << "#endif\n";
       }
-      expected_params += "int";
-      only_pyobjects = false;
 
     } else if (TypeManager::is_longlong(type)) {
       // It's not trivial to do overflow checking for a long long, so we
@@ -6331,6 +6335,15 @@ write_function_instance(ostream &out, FunctionRemap *remap,
   // Track how many curly braces we've opened.
   short open_scopes = 0;
 
+  // extra_type_check is done before extra_convert, extra_param_check after.
+  string extra_type_check_str = extra_type_check.str();
+  if (!extra_type_check_str.empty() && args_type == AT_single_arg) {
+    if (type_check.empty()) {
+      type_check = "true";
+    }
+    type_check += extra_type_check_str;
+  }
+
   if (!type_check.empty() && args_type == AT_single_arg) {
     indent(out, indent_level)
       << "if (" << type_check << ") {\n";
@@ -6350,10 +6363,12 @@ write_function_instance(ostream &out, FunctionRemap *remap,
           // case we have implemented ourselves.
           if (min_num_args == 1) {
             indent(out, indent_level)
-              << "if (Dtool_ExtractArg(&" << param_name << ", args, kwds, " << keyword_list_new << ")) {\n";
+              << "if (Dtool_ExtractArg(&" << param_name << ", args, kwds, " << keyword_list_new << ")"
+              << extra_type_check_str << ") {\n";
           } else {
             indent(out, indent_level)
-              << "if (Dtool_ExtractOptionalArg(&" << param_name << ", args, kwds, " << keyword_list_new << ")) {\n";
+              << "if (Dtool_ExtractOptionalArg(&" << param_name << ", args, kwds, " << keyword_list_new << ")"
+              << extra_type_check_str << ") {\n";
           }
         } else {
           // We have to use the more expensive PyArg_ParseTupleAndKeywords.
@@ -6373,7 +6388,8 @@ write_function_instance(ostream &out, FunctionRemap *remap,
           indent(out, indent_level)
             << "if (PyArg_ParseTupleAndKeywords(args, kwds, \""
             << format_specifiers << ":" << method_name
-            << "\", (char **)keyword_list" << parameter_list << ")) {\n";
+            << "\", (char **)keyword_list" << parameter_list << ")"
+            << extra_type_check_str << ") {\n";
         }
 
       } else if (only_pyobjects) {
@@ -6382,21 +6398,23 @@ write_function_instance(ostream &out, FunctionRemap *remap,
         if (max_num_args == 1) {
           if (min_num_args == 1) {
             indent(out, indent_level)
-              << "if (Dtool_ExtractArg(&" << param_name << ", args, kwds)) {\n";
+              << "if (Dtool_ExtractArg(&" << param_name << ", args, kwds)"
+              << extra_type_check_str << ") {\n";
           } else {
             indent(out, indent_level)
-              << "if (Dtool_ExtractOptionalArg(&" << param_name << ", args, kwds)) {\n";
+              << "if (Dtool_ExtractOptionalArg(&" << param_name << ", args, kwds)"
+              << extra_type_check_str << ") {\n";
           }
         } else if (max_num_args == 0) {
           indent(out, indent_level)
-            << "if (Dtool_CheckNoArgs(args, kwds)) {\n";
+            << "if (Dtool_CheckNoArgs(args, kwds)" << extra_type_check_str << ") {\n";
         } else {
           clear_error = true;
           indent(out, indent_level)
             << "if ((kwds == nullptr || PyDict_Size(kwds) == 0) && PyArg_UnpackTuple(args, \""
             << methodNameFromCppName(remap, "", false)
             << "\", " << min_num_args << ", " << max_num_args
-            << parameter_list << ")) {\n";
+            << parameter_list << ")" << extra_type_check_str << ") {\n";
         }
 
       } else {
@@ -6404,7 +6422,7 @@ write_function_instance(ostream &out, FunctionRemap *remap,
         indent(out, indent_level)
           << "if ((kwds == nullptr || PyDict_Size(kwds) == 0) && PyArg_ParseTuple(args, \""
           << format_specifiers << ":" << method_name
-          << "\"" << parameter_list << ")) {\n";
+          << "\"" << parameter_list << ")" << extra_type_check_str << ") {\n";
       }
 
       ++open_scopes;
@@ -6421,13 +6439,19 @@ write_function_instance(ostream &out, FunctionRemap *remap,
             << "if (PyTuple_GET_SIZE(args) == 1) {\n";
           indent(out, indent_level + 2)
             << param_name << " = PyTuple_GET_ITEM(args, 0);\n";
+
+          if (!extra_type_check_str.empty()) {
+            indent(out, indent_level + 2)
+              << "if (true" << extra_type_check_str << ") {\n";
+            ++open_scopes;
+          }
         } else {
           clear_error = true;
           indent(out, indent_level)
             << "if (PyArg_UnpackTuple(args, \""
             << methodNameFromCppName(remap, "", false)
             << "\", " << min_num_args << ", " << max_num_args
-            << parameter_list << ")) {\n";
+            << parameter_list << ")" << extra_type_check_str << ") {\n";
         }
 
       } else {
@@ -6435,7 +6459,7 @@ write_function_instance(ostream &out, FunctionRemap *remap,
         indent(out, indent_level)
           << "if (PyArg_ParseTuple(args, \""
           << format_specifiers << ":" << method_name
-          << "\"" << parameter_list << ")) {\n";
+          << "\"" << parameter_list << ")" << extra_type_check_str << ") {\n";
       }
       ++open_scopes;
       indent_level += 2;
@@ -6446,7 +6470,8 @@ write_function_instance(ostream &out, FunctionRemap *remap,
       if (!only_pyobjects && format_specifiers != "O") {
         indent(out, indent_level)
           << "if (PyArg_Parse(arg, \"" << format_specifiers << ":"
-          << method_name << "\"" << parameter_list << ")) {\n";
+          << method_name << "\"" << parameter_list << ")"
+          << extra_type_check_str << ") {\n";
 
         ++open_scopes;
         clear_error = true;
@@ -6454,6 +6479,11 @@ write_function_instance(ostream &out, FunctionRemap *remap,
       }
 
     default:
+      if (!extra_type_check_str.empty()) {
+        indent(out, indent_level)
+          << "if (true" << extra_type_check_str << ") {\n";
+        ++open_scopes;
+      }
       break;
     }
   }
