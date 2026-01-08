@@ -40,7 +40,7 @@ interrogate_module = "python/interrogate_module"
 
 [tool.cibuildwheel]
 build = "cp38-* cp313t-* cp314t-*"
-free-threaded-support = true
+enable = ["cpython-freethreading"]
 
 [tool.cibuildwheel.linux]
 repair-wheel-command = [
