@@ -44,6 +44,8 @@ public:
   // keyword declaration.
   bool _is_inline;
 
+  CPPIdentifier *_alias_of = nullptr;
+
 private:
   CPPIdentifier *_ident;
   CPPScope *_scope;

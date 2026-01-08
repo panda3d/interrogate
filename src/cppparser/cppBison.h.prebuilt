@@ -35,8 +35,8 @@
    especially those whose name start with YY_ or yy_.  They are
    private implementation details that can be changed or removed.  */
 
-#ifndef YY_CPPYY_BUILT_TMP_CPPBISON_YXX_H_INCLUDED
-# define YY_CPPYY_BUILT_TMP_CPPBISON_YXX_H_INCLUDED
+#ifndef YY_CPPYY_CPPBISON_H_INCLUDED
+# define YY_CPPYY_CPPBISON_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -210,164 +210,6 @@ extern int cppyydebug;
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
-/* Token kinds.  */
-#define YYEMPTY -2
-#define YYEOF 0
-#define YYerror 256
-#define YYUNDEF 257
-#define REAL 258
-#define INTEGER 259
-#define CHAR_TOK 260
-#define SIMPLE_STRING 261
-#define SIMPLE_IDENTIFIER 262
-#define STRING_LITERAL 263
-#define CUSTOM_LITERAL 264
-#define IDENTIFIER 265
-#define TYPENAME_IDENTIFIER 266
-#define TYPEPACK_IDENTIFIER 267
-#define SCOPING 268
-#define TYPEDEFNAME 269
-#define ELLIPSIS 270
-#define OROR 271
-#define ANDAND 272
-#define EQCOMPARE 273
-#define NECOMPARE 274
-#define LECOMPARE 275
-#define GECOMPARE 276
-#define SPACESHIP 277
-#define LSHIFT 278
-#define RSHIFT 279
-#define POINTSAT_STAR 280
-#define DOT_STAR 281
-#define UNARY 282
-#define UNARY_NOT 283
-#define UNARY_NEGATE 284
-#define UNARY_MINUS 285
-#define UNARY_PLUS 286
-#define UNARY_STAR 287
-#define UNARY_REF 288
-#define POINTSAT 289
-#define SCOPE 290
-#define PLUSPLUS 291
-#define MINUSMINUS 292
-#define TIMESEQUAL 293
-#define DIVIDEEQUAL 294
-#define MODEQUAL 295
-#define PLUSEQUAL 296
-#define MINUSEQUAL 297
-#define OREQUAL 298
-#define ANDEQUAL 299
-#define XOREQUAL 300
-#define LSHIFTEQUAL 301
-#define RSHIFTEQUAL 302
-#define ATTR_LEFT 303
-#define ATTR_RIGHT 304
-#define KW_ALIGNAS 305
-#define KW_ALIGNOF 306
-#define KW_AUTO 307
-#define KW_BEGIN_PUBLISH 308
-#define KW_BLOCKING 309
-#define KW_BOOL 310
-#define KW_BUILTIN_VA_LIST 311
-#define KW_CATCH 312
-#define KW_CHAR 313
-#define KW_CHAR8_T 314
-#define KW_CHAR16_T 315
-#define KW_CHAR32_T 316
-#define KW_CLASS 317
-#define KW_CONST 318
-#define KW_CONSTEVAL 319
-#define KW_CONSTEXPR 320
-#define KW_CONSTINIT 321
-#define KW_CONST_CAST 322
-#define KW_DECLTYPE 323
-#define KW_DEFAULT 324
-#define KW_DELETE 325
-#define KW_DOUBLE 326
-#define KW_DYNAMIC_CAST 327
-#define KW_ELSE 328
-#define KW_END_PUBLISH 329
-#define KW_ENUM 330
-#define KW_EXTENSION 331
-#define KW_EXTERN 332
-#define KW_EXPLICIT 333
-#define KW_EXPLICIT_LPAREN 334
-#define KW_PUBLISHED 335
-#define KW_FALSE 336
-#define KW_FINAL 337
-#define KW_FLOAT 338
-#define KW_FRIEND 339
-#define KW_FOR 340
-#define KW_GOTO 341
-#define KW_HAS_VIRTUAL_DESTRUCTOR 342
-#define KW_IF 343
-#define KW_INLINE 344
-#define KW_INT 345
-#define KW_IS_ABSTRACT 346
-#define KW_IS_BASE_OF 347
-#define KW_IS_CLASS 348
-#define KW_IS_CONSTRUCTIBLE 349
-#define KW_IS_CONVERTIBLE_TO 350
-#define KW_IS_DESTRUCTIBLE 351
-#define KW_IS_EMPTY 352
-#define KW_IS_ENUM 353
-#define KW_IS_FINAL 354
-#define KW_IS_FUNDAMENTAL 355
-#define KW_IS_POD 356
-#define KW_IS_POLYMORPHIC 357
-#define KW_IS_STANDARD_LAYOUT 358
-#define KW_IS_TRIVIAL 359
-#define KW_IS_TRIVIALLY_COPYABLE 360
-#define KW_IS_UNION 361
-#define KW_LONG 362
-#define KW_MAKE_MAP_KEYS_SEQ 363
-#define KW_MAKE_MAP_PROPERTY 364
-#define KW_MAKE_PROPERTY 365
-#define KW_MAKE_PROPERTY2 366
-#define KW_MAKE_SEQ 367
-#define KW_MAKE_SEQ_PROPERTY 368
-#define KW_MUTABLE 369
-#define KW_NAMESPACE 370
-#define KW_NEW 371
-#define KW_NOEXCEPT 372
-#define KW_NOEXCEPT_LPAREN 373
-#define KW_NULLPTR 374
-#define KW_OPERATOR 375
-#define KW_OVERRIDE 376
-#define KW_PRIVATE 377
-#define KW_PROTECTED 378
-#define KW_PUBLIC 379
-#define KW_REGISTER 380
-#define KW_REINTERPRET_CAST 381
-#define KW_RESTRICT 382
-#define KW_RETURN 383
-#define KW_SHORT 384
-#define KW_SIGNED 385
-#define KW_SIZEOF 386
-#define KW_STATIC 387
-#define KW_STATIC_ASSERT 388
-#define KW_STATIC_CAST 389
-#define KW_STRUCT 390
-#define KW_TEMPLATE 391
-#define KW_THREAD_LOCAL 392
-#define KW_THROW 393
-#define KW_TRUE 394
-#define KW_TRY 395
-#define KW_TYPEDEF 396
-#define KW_TYPEID 397
-#define KW_TYPENAME 398
-#define KW_UNDERLYING_TYPE 399
-#define KW_UNION 400
-#define KW_UNSIGNED 401
-#define KW_USING 402
-#define KW_VIRTUAL 403
-#define KW_VOID 404
-#define KW_VOLATILE 405
-#define KW_WCHAR_T 406
-#define KW_WHILE 407
-#define START_CPP 408
-#define START_CONST_EXPR 409
-#define START_TYPE 410
 
 /* Value type.  */
 
@@ -391,4 +233,4 @@ struct YYLTYPE
 int cppyyparse (void);
 
 
-#endif /* !YY_CPPYY_BUILT_TMP_CPPBISON_YXX_H_INCLUDED  */
+#endif /* !YY_CPPYY_CPPBISON_H_INCLUDED  */

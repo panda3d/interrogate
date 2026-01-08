@@ -82,20 +82,23 @@ output(std::ostream &out, int indent_level, CPPScope *scope, bool complete) cons
 
   if (!complete && _ident != nullptr) {
     // If we have a name, use it.
-    out << "namespace " << _ident->get_local_name(scope);
+    out << _ident->get_local_name(scope);
   }
   else {
     if (!_attributes.is_empty()) {
       out << _attributes << " ";
     }
     if (_ident != nullptr) {
-      out << _ident->get_local_name(scope) << " {\n";
-    } else {
-      out << "{\n";
+      out << _ident->get_local_name(scope) << " ";
     }
 
-    _scope->write(out, indent_level + 2, _scope);
-    indent(out, indent_level) << "}";
+    if (_alias_of != nullptr) {
+      out << "= " << _alias_of->get_local_name(scope);
+    } else {
+      out << "{\n";
+      _scope->write(out, indent_level + 2, _scope);
+      indent(out, indent_level) << "}";
+    }
   }
 }
 

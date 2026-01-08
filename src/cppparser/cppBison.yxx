@@ -3155,6 +3155,18 @@ namespace_declaration:
 }
         | KW_NAMESPACE '{' cpp '}'
         | KW_INLINE KW_NAMESPACE '{' cpp '}'
+        | KW_NAMESPACE optional_attributes name '=' name ';'
+{
+  CPPScope *target_scope = $5->find_scope(current_scope, global_scope, current_lexer);
+  if (target_scope == nullptr) {
+    yyerror("namespace alias target not found: " + $5->get_fully_scoped_name(), @5);
+  } else {
+    CPPNamespace *nspace = new CPPNamespace($3, target_scope, @1.file, $2);
+    nspace->_alias_of = $5;
+    current_scope->add_declaration(nspace, global_scope, current_lexer, @1);
+    current_scope->define_namespace(nspace);
+  }
+}
         ;
 
 using_declaration:
