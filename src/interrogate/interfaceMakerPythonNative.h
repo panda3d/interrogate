@@ -152,7 +152,8 @@ private:
                                const Function::Remaps &remaps,
                                const std::string &name, std::string &expected_params,
                                bool coercion_allowed,
-                               ArgsType args_type, int return_flags);
+                               ArgsType args_type, int return_flags,
+                               bool exclusive_fastcall = false);
   void write_coerce_constructor(std::ostream &out, Object *obj, bool is_const);
 
   int collapse_default_remaps(std::map<int, std::set<FunctionRemap *> > &map_sets,

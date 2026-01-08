@@ -17,6 +17,16 @@
 
 #include "py_panda.h"
 
+#if PY_VERSION_HEX >= 0x03080000
+#define METH_FASTCALL_OR_VARARGS METH_FASTCALL
+#define FASTCALL_OR_VARARGS_ARGS PyObject *const *fc_args, Py_ssize_t fc_nargs
+#define FASTCALL_OR_VARARGS_KEYWORDS_ARGS PyObject *const *fc_args, Py_ssize_t fc_nargs, PyObject *fc_kwnames
+#else
+#define METH_FASTCALL_OR_VARARGS METH_VARARGS
+#define FASTCALL_OR_VARARGS_ARGS PyObject *args
+#define FASTCALL_OR_VARARGS_KEYWORDS_ARGS PyObject *args, PyObject *kwds
+#endif
+
 using namespace std;
 
 // This is now simply a forward declaration.  The actual definition is created

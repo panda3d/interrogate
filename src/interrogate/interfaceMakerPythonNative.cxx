@@ -1725,16 +1725,33 @@ write_module_support(ostream &out, ostream *out_h, InterrogateModuleDef *def) {
       string name1 = methodNameFromCppName(func, "", false);
       string name2 = methodNameFromCppName(func, "", true);
 
+      bool exclusive_fastcall = true;
+      for (FunctionRemap *remap : func->_remaps) {
+        if (((remap->_flags & FunctionRemap::F_fastcall) == 0 ||
+             (remap->_flags & FunctionRemap::F_explicit_args) == 0) && is_remap_legal(remap)) {
+          exclusive_fastcall = false;
+        }
+      }
+
       string flags;
       string fptr = "&" + func->_name;
       switch (func->_args_type) {
       case AT_keyword_args:
-        flags = "METH_VARARGS | METH_KEYWORDS";
+        if (exclusive_fastcall) {
+          flags = "METH_FASTCALL_OR_VARARGS | METH_KEYWORDS";
+        } else {
+          flags = "METH_VARARGS | METH_KEYWORDS";
+        }
         fptr = "(PyCFunction) " + fptr;
         break;
 
       case AT_varargs:
-        flags = "METH_VARARGS";
+        if (exclusive_fastcall) {
+          flags = "METH_FASTCALL_OR_VARARGS";
+          fptr = "(PyCFunction) " + fptr;
+        } else {
+          flags = "METH_VARARGS";
+        }
         break;
 
       case AT_single_arg:
@@ -1903,6 +1920,14 @@ write_module_class(ostream &out, Object *obj) {
       got_deepcopy = true;
     }
 
+    bool exclusive_fastcall = true;
+    for (FunctionRemap *remap : func->_remaps) {
+      if (((remap->_flags & FunctionRemap::F_fastcall) == 0 ||
+           (remap->_flags & FunctionRemap::F_explicit_args) == 0) && is_remap_legal(remap)) {
+        exclusive_fastcall = false;
+      }
+    }
+
     string name1 = methodNameFromCppName(func, export_class_name, false);
     string name2 = methodNameFromCppName(func, export_class_name, true);
 
@@ -1910,12 +1935,21 @@ write_module_class(ostream &out, Object *obj) {
     string fptr = "&" + func->_name;
     switch (func->_args_type) {
     case AT_keyword_args:
-      flags = "METH_VARARGS | METH_KEYWORDS";
+      if (exclusive_fastcall) {
+        flags = "METH_FASTCALL_OR_VARARGS | METH_KEYWORDS";
+      } else {
+        flags = "METH_VARARGS | METH_KEYWORDS";
+      }
       fptr = "(PyCFunction) " + fptr;
       break;
 
     case AT_varargs:
-      flags = "METH_VARARGS";
+      if (exclusive_fastcall) {
+        flags = "METH_FASTCALL_OR_VARARGS";
+        fptr = "(PyCFunction) " + fptr;
+      } else {
+        flags = "METH_VARARGS";
+      }
       break;
 
     case AT_single_arg:
@@ -3945,10 +3979,16 @@ write_function_for_top(ostream &out, InterfaceMaker::Object *obj, InterfaceMaker
   // First check if this function has non-slotted and legal remaps, ie.  if we
   // should even write it.
   bool has_remaps = false;
+  bool exclusive_fastcall = true;
 
   for (FunctionRemap *remap : func->_remaps) {
     if (!is_remap_legal(remap)) {
       continue;
+    }
+
+    if (((remap->_flags & FunctionRemap::F_fastcall) == 0 ||
+         (remap->_flags & FunctionRemap::F_explicit_args) == 0) && is_remap_legal(remap)) {
+      exclusive_fastcall = false;
     }
 
     SlottedFunctionDef slotted_def;
@@ -3994,11 +4034,19 @@ write_function_for_top(ostream &out, InterfaceMaker::Object *obj, InterfaceMaker
 
   switch (func->_args_type) {
   case AT_keyword_args:
-    prototype += ", PyObject *args, PyObject *kwds";
+    if (exclusive_fastcall) {
+      prototype += ", FASTCALL_OR_VARARGS_KEYWORDS_ARGS";
+    } else {
+      prototype += ", PyObject *args, PyObject *kwds";
+    }
     break;
 
   case AT_varargs:
-    prototype += ", PyObject *args";
+    if (exclusive_fastcall) {
+      prototype += ", FASTCALL_OR_VARARGS_ARGS";
+    } else {
+      prototype += ", PyObject *args";
+    }
     break;
 
   case AT_single_arg:
@@ -4012,7 +4060,7 @@ write_function_for_top(ostream &out, InterfaceMaker::Object *obj, InterfaceMaker
   prototype += ")";
 
   string expected_params;
-  write_function_for_name(out, obj, func->_remaps, prototype, expected_params, true, func->_args_type, RF_pyobject | RF_err_null);
+  write_function_for_name(out, obj, func->_remaps, prototype, expected_params, true, func->_args_type, RF_pyobject | RF_err_null, exclusive_fastcall);
 
   // Now synthesize a variable for the docstring.
   ostringstream comment;
@@ -4047,7 +4095,8 @@ write_function_for_name(ostream &out, Object *obj,
                         const string &function_name,
                         string &expected_params,
                         bool coercion_allowed,
-                        ArgsType args_type, int return_flags) {
+                        ArgsType args_type, int return_flags,
+                        bool exclusive_fastcall) {
   std::map<int, std::set<FunctionRemap *> > map_sets;
   std::map<int, std::set<FunctionRemap *> >::iterator mii;
   std::set<FunctionRemap *>::iterator sii;
@@ -4151,7 +4200,15 @@ write_function_for_name(ostream &out, Object *obj,
 
   if (args_type == AT_keyword_args && !has_keywords) {
     // We don't actually take keyword arguments.  Make sure we didn't get any.
+    if (exclusive_fastcall) {
+      out << "#if METH_FASTCALL_OR_VARARGS == METH_FASTCALL\n";
+      out << "  if (fc_kwnames != nullptr && PyTuple_GET_SIZE(fc_kwnames) > 0) {\n";
+      out << "#else\n";
+    }
     out << "  if (kwds != nullptr && PyDict_Size(kwds) > 0) {\n";
+    if (exclusive_fastcall) {
+      out << "#endif\n";
+    }
     out << "#ifdef NDEBUG\n";
     error_raise_return(out, 4, return_flags, "TypeError", "function takes no keyword arguments");
     out << "#else\n";
@@ -4175,6 +4232,11 @@ write_function_for_name(ostream &out, Object *obj,
   }
 
   if (has_fastcall) {
+    // Generate backward compatibility for older Python versions that don't
+    // support the fastcall protocol.
+    if (exclusive_fastcall) {
+      out << "#if METH_FASTCALL_OR_VARARGS != METH_FASTCALL\n";
+    }
     if (args_type == AT_keyword_args && has_keywords) {
       out << "  Py_ssize_t fc_nargs = PyTuple_GET_SIZE(args);\n";
       out << "  PyObject *const *fc_args;\n";
@@ -4223,6 +4285,15 @@ write_function_for_name(ostream &out, Object *obj,
       if (has_keywords) {
         out << "  PyObject *fc_kwnames = nullptr;\n";
       }
+    }
+    if (exclusive_fastcall) {
+      if (return_flags & RF_decref_kwnames) {
+        // If we decref this later (unconditionally), we need to unref this
+        // in the case where we don't construct in ourselves
+        out << "#else\n";
+        out << "  Py_XINCREF(fc_kwnames);\n";
+      }
+      out << "#endif\n";
     }
   }
 
