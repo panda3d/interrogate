@@ -1622,6 +1622,26 @@ is_pair(CPPType *type) {
 }
 
 /**
+ * Returns true if the indicated type is PyObject *const *.
+ */
+bool TypeManager::
+is_pointer_to_pointer_to_PyObject(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_const:
+    return is_pointer_to_pointer_to_PyObject(type->as_const_type()->_wrapped_around);
+
+  case CPPDeclaration::ST_pointer:
+    return is_pointer_to_PyObject(type->as_pointer_type()->_pointing_at);
+
+  case CPPDeclaration::ST_typedef:
+    return is_pointer_to_pointer_to_PyObject(type->as_typedef_type()->_type);
+
+  default:
+    return false;
+  }
+}
+
+/**
  * Returns true if the indicated type is PyObject *.
  */
 bool TypeManager::

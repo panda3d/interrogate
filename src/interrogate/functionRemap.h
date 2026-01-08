@@ -103,6 +103,7 @@ public:
     F_hash               = 0x4000,
     F_explicit_args      = 0x8000,
     F_explicit_cls       =0x10000,
+    F_fastcall           =0x20000,
   };
 
   typedef std::vector<Parameter> Parameters;

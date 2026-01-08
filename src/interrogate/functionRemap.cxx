@@ -684,9 +684,15 @@ setup_properties(const InterrogateFunction &ifunc, InterfaceMaker *interface_mak
       if (fname == "__traverse__") {
         // Hack to record this even though we can't wrap visitproc.
         param._remap = new ParameterRemapUnchanged(type);
-      } else {
-        // nout << "Can't handle parameter " << i << " of method " <<
-        // *_cppfunc << "\n";
+      }
+      else if (param._name == "args" &&
+               TypeManager::is_pointer_to_pointer_to_PyObject(type) &&
+               TypeManager::is_const_pointer_to_anything(type)) {
+        // Special case for PyObject *const *args
+        param._remap = new ParameterRemapUnchanged(type);
+      }
+      else {
+        //nout << "Can't handle parameter " << i << " of method " << *_cppfunc << "\n";
         return false;
       }
     } else {
@@ -824,6 +830,18 @@ setup_properties(const InterrogateFunction &ifunc, InterfaceMaker *interface_mak
       _flags |= F_explicit_args;
       _args_type = InterfaceMaker::AT_keyword_args;
     }
+    else if (_parameters.size() == first_param + 2 &&
+             _parameters[first_param]._name == "args" &&
+             _parameters[first_param + 1]._name == "nargs") {
+      _flags |= F_explicit_args | F_fastcall;
+    }
+    else if (_parameters.size() == first_param + 3 &&
+             _parameters[first_param]._name == "args" &&
+             _parameters[first_param + 1]._name == "nargs" &&
+             _parameters[first_param + 2]._name == "kwnames") {
+      _flags |= F_explicit_args | F_fastcall;
+      _args_type = InterfaceMaker::AT_keyword_args;
+    }
   }
 
   switch (_type) {
@@ -934,7 +952,8 @@ setup_properties(const InterrogateFunction &ifunc, InterfaceMaker *interface_mak
       _args_type = InterfaceMaker::AT_single_arg;
 
     } else {
-      if (_args_type == InterfaceMaker::AT_varargs) {
+      if (_args_type == InterfaceMaker::AT_varargs &&
+          (_flags & F_fastcall) == 0) {
         // Every other method can take keyword arguments, if they take more
         // than one argument, and the arguments are named.
         for (size_t i = first_param; i < _parameters.size(); ++i) {

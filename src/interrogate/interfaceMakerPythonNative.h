@@ -122,6 +122,9 @@ private:
 
     // Used inside a rich comparison function.
     RF_richcompare_zero = 0x10000,
+
+    // Decref temporary kwnames object.
+    RF_decref_kwnames = 0x20000,
   };
 
   class SlottedFunctionDef {

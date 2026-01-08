@@ -4058,6 +4058,7 @@ write_function_for_name(ostream &out, Object *obj,
   int max_required_args = 0;
   bool all_nonconst = true;
   bool has_keywords = false;
+  bool has_fastcall = false;
 
   out << "/**\n * Python function wrapper for:\n";
   for (ri = remaps.begin(); ri != remaps.end(); ++ri) {
@@ -4075,6 +4076,10 @@ write_function_for_name(ostream &out, Object *obj,
 
       if (remap->_args_type == AT_keyword_args) {
         has_keywords = true;
+      }
+
+      if (remap->_flags & FunctionRemap::F_fastcall) {
+        has_fastcall = true;
       }
 
       max_required_args = max(max_num_args, max_required_args);
@@ -4167,6 +4172,58 @@ write_function_for_name(ostream &out, Object *obj,
 
   if (args_type == AT_keyword_args || args_type == AT_varargs) {
     max_required_args = collapse_default_remaps(map_sets, max_required_args);
+  }
+
+  if (has_fastcall) {
+    if (args_type == AT_keyword_args && has_keywords) {
+      out << "  Py_ssize_t fc_nargs = PyTuple_GET_SIZE(args);\n";
+      out << "  PyObject *const *fc_args;\n";
+      out << "  PyObject *fc_kwnames;\n";
+      out << "  if (kwds == nullptr) {\n";
+      out << "    fc_args = &PyTuple_GET_ITEM(args, 0);\n";
+      out << "    fc_kwnames = nullptr;\n";
+      out << "  } else {\n";
+      out << "    Py_BEGIN_CRITICAL_SECTION(kwds);\n";
+      out << "    PyObject **fc_args_mut = (PyObject **)alloca(sizeof(PyObject *) * (fc_nargs + PyDict_GET_SIZE(kwds)));\n";
+      out << "    for (Py_ssize_t i = 0; i < fc_nargs; i++) {\n";
+      out << "      fc_args_mut[i] = PyTuple_GET_ITEM(args, i);\n";
+      out << "    }\n";
+      out << "    fc_kwnames = PyTuple_New(PyDict_GET_SIZE(kwds));\n";
+      out << "    PyObject *key, *value;\n";
+      out << "    Py_ssize_t pos = 0;\n";
+      out << "    Py_ssize_t i = 0;\n";
+      out << "    while (PyDict_Next(kwds, &pos, &key, &value)) {\n";
+      out << "      Py_INCREF(key);\n";
+      out << "      PyTuple_SET_ITEM(fc_kwnames, i, key);\n";
+      out << "      fc_args_mut[fc_nargs + i] = value;\n";
+      out << "      i++;\n";
+      out << "    }\n";
+      out << "    fc_args = fc_args_mut;\n";
+      out << "    Py_END_CRITICAL_SECTION();\n";
+      out << "  }\n";
+      return_flags |= RF_decref_kwnames;
+    }
+    else if (args_type == AT_varargs) {
+      out << "  Py_ssize_t fc_nargs = PyTuple_GET_SIZE(args);\n";
+      out << "  PyObject *const *fc_args = &PyTuple_GET_ITEM(args, 0);\n";
+      if (has_keywords) {
+        out << "  PyObject *fc_kwnames = nullptr;\n";
+      }
+    }
+    else if (args_type == AT_single_arg) {
+      out << "  Py_ssize_t fc_nargs = 1;\n";
+      out << "  PyObject *const *fc_args = &arg;\n";
+      if (has_keywords) {
+        out << "  PyObject *fc_kwnames = nullptr;\n";
+      }
+    }
+    else {
+      out << "  Py_ssize_t fc_nargs = 0;\n";
+      out << "  PyObject *const *fc_args = nullptr;\n";
+      if (has_keywords) {
+        out << "  PyObject *fc_kwnames = nullptr;\n";
+      }
+    }
   }
 
   if (remap->_flags & FunctionRemap::F_explicit_args) {
@@ -5209,11 +5266,20 @@ write_function_instance(ostream &out, FunctionRemap *remap,
   if (remap->_flags & FunctionRemap::F_explicit_args) {
     // The function handles the arguments by itself.
     expected_params += "*args";
-    pexprs.push_back("args");
+    if (remap->_flags & FunctionRemap::F_fastcall) {
+      pexprs.push_back("fc_args");
+      pexprs.push_back("fc_nargs");
+    } else {
+      pexprs.push_back("args");
+    }
     if (remap->_args_type == AT_keyword_args) {
       if (args_type == AT_keyword_args) {
         expected_params += ", **kwargs";
-        pexprs.push_back("kwds");
+        if (remap->_flags & FunctionRemap::F_fastcall) {
+          pexprs.push_back("fc_kwnames");
+        } else {
+          pexprs.push_back("kwds");
+        }
       } else {
         pexprs.push_back("nullptr");
       }
@@ -6726,6 +6792,11 @@ write_function_instance(ostream &out, FunctionRemap *remap,
       return_flags &= ~RF_decref_args;
     }
 
+    if (return_flags & RF_decref_kwnames) {
+      indent(out, indent_level) << "Py_XDECREF(fc_kwnames);\n";
+      return_flags &= ~RF_decref_kwnames;
+    }
+
     // An even specialer special case for functions with void return or bool
     // return.  We have our own functions that do all this in a single
     // function call, so it should reduce the amount of code output while not
@@ -6809,6 +6880,11 @@ write_function_instance(ostream &out, FunctionRemap *remap,
     if (return_flags & RF_decref_args) {
       indent(out, indent_level) << "Py_DECREF(args);\n";
       return_flags &= ~RF_decref_args;
+    }
+
+    if (return_flags & RF_decref_kwnames) {
+      indent(out, indent_level) << "Py_XDECREF(fc_kwnames);\n";
+      return_flags &= ~RF_decref_kwnames;
     }
 
     // Outputs code to check to see if an assertion has failed while the C++
@@ -7006,6 +7082,9 @@ error_return(ostream &out, int indent_level, int return_flags) {
   if (return_flags & RF_decref_args) {
     indent(out, indent_level) << "Py_DECREF(args);\n";
   }
+  if (return_flags & RF_decref_kwnames) {
+    indent(out, indent_level) << "Py_XDECREF(fc_kwnames);\n";
+  }
 
   if (return_flags & RF_int) {
     indent(out, indent_level) << "return -1;\n";
@@ -7031,6 +7110,9 @@ error_bad_args_return(ostream &out, int indent_level, int return_flags,
 
   if (return_flags & RF_decref_args) {
     indent(out, indent_level) << "Py_DECREF(args);\n";
+  }
+  if (return_flags & RF_decref_kwnames) {
+    indent(out, indent_level) << "Py_XDECREF(fc_kwnames);\n";
   }
 
   if ((return_flags & RF_err_null) != 0 &&
@@ -7082,6 +7164,10 @@ error_raise_return(ostream &out, int indent_level, int return_flags,
   if (return_flags & RF_decref_args) {
     indent(out, indent_level) << "Py_DECREF(args);\n";
     return_flags &= ~RF_decref_args;
+  }
+  if (return_flags & RF_decref_kwnames) {
+    indent(out, indent_level) << "Py_XDECREF(fc_kwnames);\n";
+    return_flags &= ~RF_decref_kwnames;
   }
 
   if (format_args.empty()) {
@@ -8303,6 +8389,14 @@ is_remap_legal(FunctionRemap *remap) {
     ParameterRemap *param = remap->_parameters[pn]._remap;
     CPPType *orig_type = param->get_orig_type();
     if (param->get_default_value() == nullptr && !is_cpp_type_legal(orig_type)) {
+      if ((remap->_flags & FunctionRemap::F_explicit_args) != 0 &&
+          (remap->_flags & FunctionRemap::F_fastcall) != 0 &&
+          remap->_parameters[pn]._name == "args" &&
+          TypeManager::is_pointer_to_pointer_to_PyObject(orig_type) &&
+          TypeManager::is_const_pointer_to_anything(orig_type)) {
+        // Allow PyObject *const *args through.
+        continue;
+      }
       return false;
     }
   }
