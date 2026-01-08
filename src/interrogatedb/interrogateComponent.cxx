@@ -18,6 +18,19 @@
 // functions that must return a const string reference.
 std::string InterrogateComponent::_empty_string;
 
+void InterrogateComponent::
+write_names(std::ostream &out) const {
+  out << "\"" << _name << "\"";
+
+  if (!_alt_names.empty()) {
+    out << " /";
+
+    for (const std::string &alt_name : _alt_names) {
+      out << " \"" << alt_name << "\"";
+    }
+  }
+}
+
 /**
  * Formats the component for output to a data file.
  */

@@ -38,6 +38,7 @@ public:
   INLINE FunctionIndex get_length_getter() const;
   INLINE FunctionIndex get_element_getter() const;
 
+  void write(std::ostream &out, int indent_level = 0) const;
   void output(std::ostream &out) const;
   void input(std::istream &in);
 

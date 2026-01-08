@@ -45,6 +45,7 @@ public:
   INLINE int get_num_alt_names() const;
   INLINE const std::string &get_alt_name(int n) const;
 
+  void write_names(std::ostream &out) const;
   void output(std::ostream &out) const;
   void input(std::istream &in);
 

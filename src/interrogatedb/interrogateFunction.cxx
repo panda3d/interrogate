@@ -15,6 +15,7 @@
 #include "indexRemapper.h"
 #include "interrogate_datafile.h"
 #include "interrogateDatabase.h"
+#include "indent.h"
 
 /**
  *
@@ -52,6 +53,107 @@ operator = (const InterrogateFunction &copy) {
 
   _instances = copy._instances;
   _expression = copy._expression;
+}
+
+/**
+ * Formats the function in a human-readable manner.
+ */
+void InterrogateFunction::
+write(std::ostream &out, int indent_level, const char *tag) const {
+  indent(out, indent_level) << tag << " \"" << get_scoped_name() << "\"";
+  //write_names(out);
+  out << " {\n";
+
+  if (_flags != 0) {
+    indent(out, indent_level) << "  flags:";
+    if (_flags & F_global) {
+      out << " global";
+    }
+    if (_flags & F_virtual) {
+      out << " virtual";
+    }
+    if (_flags & F_method) {
+      out << " method";
+    }
+    if (_flags & F_typecast) {
+      out << " typecast";
+    }
+    if (_flags & F_getter) {
+      out << " getter";
+    }
+    if (_flags & F_setter) {
+      out << " setter";
+    }
+    if (_flags & F_unary_op) {
+      out << " unary_op";
+    }
+    if (_flags & F_operator_typecast) {
+      out << " operator_typecast";
+    }
+    if (_flags & F_constructor) {
+      out << " constructor";
+    }
+    if (_flags & F_destructor) {
+      out << " destructor";
+    }
+    if (_flags & F_item_assignment) {
+      out << " item assignment";
+    }
+    out << "\n";
+  }
+
+  if (!_expression.empty()) {
+    indent(out, indent_level) << "  expression: \"" << _expression << "\"\n";
+  }
+
+  if (!_prototype.empty()) {
+    indent(out, indent_level) << "  prototype:";
+    bool next_indent = true;
+    for (char c : _prototype) {
+      if (c == '\n') {
+        next_indent = true;
+      } else {
+        if (next_indent) {
+          out << "\n";
+          indent(out, indent_level + 4);
+          next_indent = false;
+        }
+        out << c;
+      }
+    }
+    out << "\n";
+  }
+  if (!_comment.empty()) {
+    indent(out, indent_level) << "  comment:";
+    bool next_indent = true;
+    for (char c : _comment) {
+      if (c == '\n') {
+        next_indent = true;
+      } else {
+        if (next_indent) {
+          out << "\n";
+          indent(out, indent_level + 4);
+          next_indent = false;
+        }
+        out << c;
+      }
+    }
+    out << "\n";
+  }
+
+  if (!_c_wrappers.empty() || !_python_wrappers.empty()) {
+    out << "\n";
+
+    InterrogateDatabase *idb = InterrogateDatabase::get_ptr();
+    for (FunctionWrapperIndex index : _c_wrappers) {
+      idb->get_wrapper(index).write(out, indent_level + 2, "c wrapper");
+    }
+    for (FunctionWrapperIndex index : _python_wrappers) {
+      idb->get_wrapper(index).write(out, indent_level + 2, "python wrapper");
+    }
+  }
+
+  indent(out, indent_level) << "}\n";
 }
 
 /**

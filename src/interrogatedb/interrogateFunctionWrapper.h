@@ -56,6 +56,7 @@ public:
   INLINE bool has_comment() const;
   INLINE const std::string &get_comment() const;
 
+  void write(std::ostream &out, int indent_level = 0, const char *tag = "wrapper") const;
   void output(std::ostream &out) const;
   void input(std::istream &in);
 

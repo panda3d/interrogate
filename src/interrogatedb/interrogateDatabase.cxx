@@ -734,6 +734,151 @@ remap_indices(int first_index, IndexRemapper &remap) {
 }
 
 /**
+ * Writes the database in a human readable text format.
+ */
+void InterrogateDatabase::
+write_text(std::ostream &out) const {
+  // Write out the file header.
+  out << "version: " << _current_major_version << "." << _current_minor_version << "\n\n";
+
+  // Write out the index.  Simultaneously, make a big vector of everything to
+  // be sorted by scoped name.
+  std::vector<std::pair<std::string, int> > things;
+  out << "index:\n";
+  for (int index = 1; index < _next_index; ++index) {
+    out << " -";
+
+    FunctionMap::const_iterator fi;
+    fi = _function_map.find(index);
+    if (fi != _function_map.end() && (*fi).second != nullptr) {
+      out << " function " << (*fi).second->get_scoped_name();
+      things.push_back(std::make_pair((*fi).second->get_scoped_name(), index));
+    }
+
+    FunctionWrapperMap::const_iterator wi;
+    wi = _wrapper_map.find(index);
+    if (wi != _wrapper_map.end()) {
+      out << " wrapper";
+      if ((*wi).second.has_name()) {
+        out << " \"" << (*wi).second.get_name() << "\"";
+      }
+
+      // Wrappers often have no name, show associated function
+      fi = _function_map.find((*wi).second.get_function());
+      if (fi != _function_map.end() && (*fi).second != nullptr) {
+        out << " for " << (*fi).second->get_scoped_name();
+      }
+    }
+
+    TypeMap::const_iterator ti;
+    ti = _type_map.find(index);
+    if (ti != _type_map.end()) {
+      out << " type " << (*ti).second.get_scoped_name();
+      things.push_back(std::make_pair((*ti).second.get_scoped_name(), index));
+    }
+
+    ManifestMap::const_iterator mi;
+    mi = _manifest_map.find(index);
+    if (mi != _manifest_map.end()) {
+      out << " manifest " << (*mi).second.get_name();
+      things.push_back(std::make_pair((*mi).second.get_name(), index));
+    }
+
+    ElementMap::const_iterator ei;
+    ei = _element_map.find(index);
+    if (ei != _element_map.end()) {
+      out << " element " << (*ei).second.get_scoped_name();
+      things.push_back(std::make_pair((*ei).second.get_scoped_name(), index));
+    }
+
+    MakeSeqMap::const_iterator msi;
+    msi = _make_seq_map.find(index);
+    if (msi != _make_seq_map.end()) {
+      out << " make_seq " << (*msi).second.get_scoped_name();
+      things.push_back(std::make_pair((*msi).second.get_scoped_name(), index));
+    }
+
+    out << "\n";
+  }
+
+  // Sort everything by scoped name and write it out.
+  std::sort(things.begin(), things.end());
+
+  for (const auto &pair : things) {
+    out << "\n";
+
+    int index = pair.second;
+
+    FunctionMap::const_iterator fi;
+    fi = _function_map.find(index);
+    if (fi != _function_map.end() && (*fi).second != nullptr) {
+      (*fi).second->write(out);
+    }
+
+    TypeMap::const_iterator ti;
+    ti = _type_map.find(index);
+    if (ti != _type_map.end()) {
+      (*ti).second.write(out);
+    }
+
+    ManifestMap::const_iterator mi;
+    mi = _manifest_map.find(index);
+    if (mi != _manifest_map.end()) {
+      (*mi).second.write(out);
+    }
+
+    ElementMap::const_iterator ei;
+    ei = _element_map.find(index);
+    if (ei != _element_map.end()) {
+      (*ei).second.write(out);
+    }
+
+    MakeSeqMap::const_iterator msi;
+    msi = _make_seq_map.find(index);
+    if (msi != _make_seq_map.end()) {
+      (*msi).second.write(out);
+    }
+  }
+
+  // Write out the type hierarchy, global functions, etc.
+  /*for (TypeIndex type : _global_types) {
+    TypeMap::const_iterator ti;
+    ti = _type_map.find(type);
+    if (ti != _type_map.end()) {
+      (*ti).second.write(out);
+    }
+    out << "\n";
+  }
+
+  for (FunctionIndex function : _global_functions) {
+    FunctionMap::const_iterator fi;
+    fi = _function_map.find(function);
+    if (fi != _function_map.end() && (*fi).second != nullptr) {
+      (*fi).second->write(out);
+    }
+    out << "\n";
+  }
+
+  for (ManifestIndex manifest : _global_manifests) {
+    ManifestMap::const_iterator mi;
+    mi = _manifest_map.find(manifest);
+    if (mi != _manifest_map.end()) {
+      (*mi).second.write(out);
+    }
+    out << "\n";
+  }
+
+  for (ElementIndex element : _global_elements) {
+    ElementMap::const_iterator ei;
+    ei = _element_map.find(element);
+    if (ei != _element_map.end()) {
+      (*ei).second.write(out);
+    }
+    out << "\n";
+  }*/
+}
+
+/**
  * Writes the database to the indicated stream for later reading.
  */
 void InterrogateDatabase::

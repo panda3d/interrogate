@@ -15,6 +15,7 @@
 #include "indexRemapper.h"
 #include "interrogate_datafile.h"
 #include "interrogateDatabase.h"
+#include "indent.h"
 
 #include <algorithm>
 
@@ -134,6 +135,241 @@ merge_with(const InterrogateType &other) {
     (*this) = other;
     _flags |= old_flags;
   }
+}
+
+/**
+ * Formats the type in a human-readable manner.
+ */
+void InterrogateType::
+write(std::ostream &out, int indent_level) const {
+  indent(out, indent_level) << "type ";
+  //write_names(out);
+  out << "\"" << get_scoped_name() << "\"";
+  out << " {\n";
+
+  //indent(out, indent_level) << "  true_name: " << _true_name << "\n";
+  if (_flags != 0) {
+    indent(out, indent_level) << "  flags:";
+    if (_flags & F_global) {
+      out << " global";
+    }
+    if (_flags & F_atomic) {
+      out << " atomic";
+    }
+    if (_flags & F_unsigned) {
+      out << " unsigned";
+    }
+    if (_flags & F_signed) {
+      out << " signed";
+    }
+    if (_flags & F_long) {
+      out << " long";
+    }
+    if (_flags & F_longlong) {
+      out << " longlong";
+    }
+    if (_flags & F_short) {
+      out << " short";
+    }
+    if (_flags & F_wrapped) {
+      out << " wrapped";
+    }
+    if (_flags & F_pointer) {
+      out << " pointer";
+    }
+    if (_flags & F_const) {
+      out << " const";
+    }
+    if (_flags & F_struct) {
+      out << " struct";
+    }
+    if (_flags & F_class) {
+      out << " class";
+    }
+    if (_flags & F_union) {
+      out << " union";
+    }
+    if (_flags & F_fully_defined) {
+      out << " fully_defined";
+    }
+    if (_flags & F_true_destructor) {
+      out << " true_destructor";
+    }
+    if (_flags & F_private_destructor) {
+      out << " private_destructor";
+    }
+    if (_flags & F_inherited_destructor) {
+      out << " inherited_destructor";
+    }
+    if (_flags & F_implicit_destructor) {
+      out << " implicit_destructor";
+    }
+    if (_flags & F_nested) {
+      out << " nested";
+    }
+    if (_flags & F_enum) {
+      out << " enum";
+    }
+    if (_flags & F_unpublished) {
+      out << " unpublished";
+    }
+    if (_flags & F_typedef) {
+      out << " typedef";
+    }
+    if (_flags & F_array) {
+      out << " array[";
+      out << _array_size << "]";
+    }
+    if (_flags & F_scoped_enum) {
+      out << " scoped_enum";
+    }
+    if (_flags & F_final) {
+      out << " final";
+    }
+    if (_flags & F_deprecated) {
+      out << " deprecated";
+    }
+    out << "\n";
+  }
+
+  if (_atomic_token != AT_not_atomic) {
+    indent(out, indent_level + 2) << "atomic_token: ";
+    switch (_atomic_token) {
+    case AT_int:
+      out << "int\n";
+      break;
+    case AT_float:
+      out << "float\n";
+      break;
+    case AT_double:
+      out << "double\n";
+      break;
+    case AT_bool:
+      out << "bool\n";
+      break;
+    case AT_char:
+      out << "char\n";
+      break;
+    case AT_void:
+      out << "void\n";
+      break;
+    case AT_string:
+      out << "string\n";
+      break;
+    case AT_longlong:
+      out << "longlong\n";
+      break;
+    case AT_null:
+      out << "null\n";
+      break;
+    default:
+      out << "INVALID\n";
+    }
+  }
+
+  InterrogateDatabase *idb = InterrogateDatabase::get_ptr();
+  if (_wrapped_type != 0) {
+    indent(out, indent_level)
+      << "  wrapped_type: " << idb->get_type(_wrapped_type).get_scoped_name() << "\n";
+  }
+
+  if (!_comment.empty()) {
+    indent(out, indent_level) << "  comment:";
+    bool next_indent = true;
+    for (char c : _comment) {
+      if (c == '\n') {
+        next_indent = true;
+      } else {
+        if (next_indent) {
+          out << "\n";
+          indent(out, indent_level + 4);
+          next_indent = false;
+        }
+        out << c;
+      }
+    }
+    out << "\n";
+  }
+
+  for (const Derivation &deriv : _derivations) {
+    indent(out, indent_level) << "  derivation \"" << idb->get_type(deriv._base).get_name() << "\" {\n";
+    if (deriv._flags != 0) {
+      indent(out, indent_level) << "    flags:";
+      if (deriv._flags & DF_upcast) {
+        out << " upcast";
+      }
+      if (deriv._flags & DF_downcast) {
+        out << " downcast";
+      }
+      if (deriv._flags & DF_downcast_impossible) {
+        out << " downcast_impossible";
+      }
+      out << "\n";
+    }
+
+    if (deriv._upcast != 0) {
+      //out << "\n";
+      //idb->get_function(deriv._upcast).write(out, indent_level + 4, "upcast");
+      indent(out, indent_level + 4) << "upcast: "
+        << idb->get_function(deriv._upcast).get_scoped_name() << "\n";
+    }
+    if (deriv._downcast != 0) {
+      //out << "\n";
+      //idb->get_function(deriv._downcast).write(out, indent_level + 4, "downcast");
+      indent(out, indent_level + 4) << "downcast: "
+        << idb->get_function(deriv._downcast).get_scoped_name() << "\n";
+    }
+    indent(out, indent_level) << "  }\n";
+  }
+
+  if (!_constructors.empty() || _destructor != 0 || !_methods.empty() ||
+      !_casts.empty() || !_elements.empty() || !_make_seqs.empty() ||
+      !_nested_types.empty()) {
+    out << "\n";
+  }
+
+  for (FunctionIndex index : _constructors) {
+    //idb->get_function(index).write(out, indent_level + 2, "constructor");
+    indent(out, indent_level)
+      << "  constructor: " << idb->get_function(index).get_name() << "\n";
+  }
+
+  if (_destructor != 0) {
+    //idb->get_function(_destructor).write(out, indent_level + 2, "destructor");
+    indent(out, indent_level)
+      << "  destructor: " << idb->get_function(_destructor).get_name() << "\n";
+  }
+
+  for (FunctionIndex index : _methods) {
+    //idb->get_function(index).write(out, indent_level + 2, "method");
+    indent(out, indent_level)
+      << "  method: " << idb->get_function(index).get_name() << "\n";
+  }
+
+  for (FunctionIndex index : _casts) {
+    //idb->get_function(index).write(out, indent_level + 2, "cast");
+    indent(out, indent_level)
+      << "  cast: " << idb->get_function(index).get_name() << "\n";
+  }
+
+  for (ElementIndex index : _elements) {
+    //idb->get_element(index).write(out, indent_level + 2);
+    indent(out, indent_level)
+      << "  element: " << idb->get_element(index).get_name() << "\n";
+  }
+
+  for (MakeSeqIndex index : _make_seqs) {
+    //idb->get_make_seq(index).write(out, indent_level + 2);
+    indent(out, indent_level)
+      << "  make_seq: " << idb->get_make_seq(index).get_name() << "\n";
+  }
+
+  for (TypeIndex index : _nested_types) {
+    //idb->get_type(index).write(out, indent_level + 2);
+    indent(out, indent_level)
+      << "  type: " << idb->get_type(index).get_name() << "\n";
+  }
+  indent(out, indent_level) << "}\n";
 }
 
 /**

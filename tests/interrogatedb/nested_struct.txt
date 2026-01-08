@@ -1,0 +1,383 @@
+version: 3.3
+
+index:
+ - wrapper "_inCAAAAuhpT" for Parent::Parent
+ - wrapper "_inCAAAA1u17" for Parent::Parent
+ - wrapper "_inCAAAAIh3A" for Parent::InlineChild::InlineChild
+ - wrapper "_inCAAAAFaD_" for Parent::InlineChild::InlineChild
+ - wrapper "_inCAAAA8m_4" for Parent::InlineChild::get_member
+ - wrapper "_inCAAAAxZqh" for Parent::InlineChild::set_member
+ - wrapper "_inCAAAAtRjN" for Parent::OutOfLineChild::OutOfLineChild
+ - wrapper "_inCAAAAMkf6" for Parent::OutOfLineChild::OutOfLineChild
+ - wrapper "_inCAAAA3_QQ" for Parent::OutOfLineChild::get_member
+ - wrapper "_inCAAAAdj2I" for Parent::OutOfLineChild::set_member
+ - wrapper "_inCAAAAmzj5" for Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild
+ - wrapper "_inCAAAArnMy" for Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild
+ - wrapper "_inCAAAA83Xj" for Parent::ForwardDeclaredInlineChild::get_member
+ - wrapper "_inCAAAAd_2o" for Parent::ForwardDeclaredInlineChild::set_member
+ - function Parent::InlineChild::get_member
+ - function Parent::InlineChild::set_member
+ - function Parent::InlineChild::InlineChild
+ - function Parent::InlineChild::~InlineChild
+ - function Parent::OutOfLineChild::get_member
+ - function Parent::OutOfLineChild::set_member
+ - function Parent::OutOfLineChild::OutOfLineChild
+ - function Parent::OutOfLineChild::~OutOfLineChild
+ - function Parent::ForwardDeclaredInlineChild::get_member
+ - function Parent::ForwardDeclaredInlineChild::set_member
+ - function Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild
+ - function Parent::ForwardDeclaredInlineChild::~ForwardDeclaredInlineChild
+ - function Parent::Parent
+ - function Parent::~Parent
+ - type Parent
+ - type Parent::InlineChild
+ - type int
+ - type Parent::OutOfLineChild
+ - type Parent::ForwardDeclaredInlineChild
+ - type Parent *
+ - type Parent const *
+ - type Parent const
+ - type Parent::InlineChild *
+ - type Parent::InlineChild const *
+ - type Parent::InlineChild const
+ - type void
+ - type Parent::OutOfLineChild *
+ - type Parent::OutOfLineChild const *
+ - type Parent::OutOfLineChild const
+ - type Parent::ForwardDeclaredInlineChild *
+ - type Parent::ForwardDeclaredInlineChild const *
+ - type Parent::ForwardDeclaredInlineChild const
+ - element Parent::InlineChild::member
+ - element Parent::OutOfLineChild::member
+ - element Parent::ForwardDeclaredInlineChild::member
+
+type "Parent" {
+  flags: global struct fully_defined implicit_destructor
+
+  constructor: Parent
+  destructor: ~Parent
+  type: InlineChild
+  type: OutOfLineChild
+  type: ForwardDeclaredInlineChild
+}
+
+type "Parent *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Parent
+}
+
+type "Parent const" {
+  flags: wrapped const fully_defined
+  wrapped_type: Parent
+}
+
+type "Parent const *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Parent const
+}
+
+type "Parent::ForwardDeclaredInlineChild" {
+  flags: global struct fully_defined implicit_destructor nested
+
+  constructor: ForwardDeclaredInlineChild
+  destructor: ~ForwardDeclaredInlineChild
+  element: member
+}
+
+type "Parent::ForwardDeclaredInlineChild *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Parent::ForwardDeclaredInlineChild
+}
+
+type "Parent::ForwardDeclaredInlineChild const" {
+  flags: wrapped const fully_defined
+  wrapped_type: Parent::ForwardDeclaredInlineChild
+}
+
+type "Parent::ForwardDeclaredInlineChild const *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Parent::ForwardDeclaredInlineChild const
+}
+
+function "Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild" {
+  flags: method constructor
+  prototype:
+    inline Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild(void) = default;
+    inline Parent::ForwardDeclaredInlineChild::ForwardDeclaredInlineChild(Parent::ForwardDeclaredInlineChild const &) = default;
+
+  c wrapper "_inCAAAAmzj5" {
+    flags: caller_manages has_return
+    return_type: Parent::ForwardDeclaredInlineChild *
+    unique_name: cAAAAmzj5
+  }
+  c wrapper "_inCAAAArnMy" {
+    flags: caller_manages has_return copy_constructor
+    return_type: Parent::ForwardDeclaredInlineChild *
+    unique_name: cAAAArnMy
+
+    parameter: Parent::ForwardDeclaredInlineChild const *
+  }
+}
+
+function "Parent::ForwardDeclaredInlineChild::get_member" {
+  flags: method getter
+  expression: "member"
+  prototype:
+    int Parent::ForwardDeclaredInlineChild::get_member(void) const;
+  comment:
+    getter for int Parent::ForwardDeclaredInlineChild::member;
+
+  c wrapper "_inCAAAA83Xj" {
+    flags: has_return
+    return_type: int
+    unique_name: cAAAA83Xj
+
+    parameter "this" (this): Parent::ForwardDeclaredInlineChild const *
+  }
+}
+
+element "Parent::ForwardDeclaredInlineChild::member" {
+  type: int
+  flags: has_getter has_setter
+  getter: Parent::ForwardDeclaredInlineChild::get_member
+  setter: Parent::ForwardDeclaredInlineChild::set_member
+}
+
+function "Parent::ForwardDeclaredInlineChild::set_member" {
+  flags: method setter
+  expression: "member"
+  prototype:
+    void Parent::ForwardDeclaredInlineChild::set_member(int value);
+  comment:
+    setter for int Parent::ForwardDeclaredInlineChild::member;
+
+  c wrapper "_inCAAAAd_2o" {
+    return_type: void
+    unique_name: cAAAAd_2o
+
+    parameter "this" (this): Parent::ForwardDeclaredInlineChild *
+    parameter "value": int
+  }
+}
+
+function "Parent::ForwardDeclaredInlineChild::~ForwardDeclaredInlineChild" {
+  flags: method destructor
+  prototype:
+    Parent::ForwardDeclaredInlineChild::~ForwardDeclaredInlineChild(void);
+}
+
+type "Parent::InlineChild" {
+  flags: global struct fully_defined implicit_destructor nested
+
+  constructor: InlineChild
+  destructor: ~InlineChild
+  element: member
+}
+
+type "Parent::InlineChild *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Parent::InlineChild
+}
+
+type "Parent::InlineChild const" {
+  flags: wrapped const fully_defined
+  wrapped_type: Parent::InlineChild
+}
+
+type "Parent::InlineChild const *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Parent::InlineChild const
+}
+
+function "Parent::InlineChild::InlineChild" {
+  flags: method constructor
+  prototype:
+    inline Parent::InlineChild::InlineChild(void) = default;
+    inline Parent::InlineChild::InlineChild(Parent::InlineChild const &) = default;
+
+  c wrapper "_inCAAAAIh3A" {
+    flags: caller_manages has_return
+    return_type: Parent::InlineChild *
+    unique_name: cAAAAIh3A
+  }
+  c wrapper "_inCAAAAFaD_" {
+    flags: caller_manages has_return copy_constructor
+    return_type: Parent::InlineChild *
+    unique_name: cAAAAFaD_
+
+    parameter: Parent::InlineChild const *
+  }
+}
+
+function "Parent::InlineChild::get_member" {
+  flags: method getter
+  expression: "member"
+  prototype:
+    int Parent::InlineChild::get_member(void) const;
+  comment:
+    getter for int Parent::InlineChild::member;
+
+  c wrapper "_inCAAAA8m_4" {
+    flags: has_return
+    return_type: int
+    unique_name: cAAAA8m_4
+
+    parameter "this" (this): Parent::InlineChild const *
+  }
+}
+
+element "Parent::InlineChild::member" {
+  type: int
+  flags: has_getter has_setter
+  getter: Parent::InlineChild::get_member
+  setter: Parent::InlineChild::set_member
+}
+
+function "Parent::InlineChild::set_member" {
+  flags: method setter
+  expression: "member"
+  prototype:
+    void Parent::InlineChild::set_member(int value);
+  comment:
+    setter for int Parent::InlineChild::member;
+
+  c wrapper "_inCAAAAxZqh" {
+    return_type: void
+    unique_name: cAAAAxZqh
+
+    parameter "this" (this): Parent::InlineChild *
+    parameter "value": int
+  }
+}
+
+function "Parent::InlineChild::~InlineChild" {
+  flags: method destructor
+  prototype:
+    Parent::InlineChild::~InlineChild(void);
+}
+
+type "Parent::OutOfLineChild" {
+  flags: global struct fully_defined implicit_destructor nested
+
+  constructor: OutOfLineChild
+  destructor: ~OutOfLineChild
+  element: member
+}
+
+type "Parent::OutOfLineChild *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Parent::OutOfLineChild
+}
+
+type "Parent::OutOfLineChild const" {
+  flags: wrapped const fully_defined
+  wrapped_type: Parent::OutOfLineChild
+}
+
+type "Parent::OutOfLineChild const *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Parent::OutOfLineChild const
+}
+
+function "Parent::OutOfLineChild::OutOfLineChild" {
+  flags: method constructor
+  prototype:
+    inline Parent::OutOfLineChild::OutOfLineChild(void) = default;
+    inline Parent::OutOfLineChild::OutOfLineChild(Parent::OutOfLineChild const &) = default;
+
+  c wrapper "_inCAAAAtRjN" {
+    flags: caller_manages has_return
+    return_type: Parent::OutOfLineChild *
+    unique_name: cAAAAtRjN
+  }
+  c wrapper "_inCAAAAMkf6" {
+    flags: caller_manages has_return copy_constructor
+    return_type: Parent::OutOfLineChild *
+    unique_name: cAAAAMkf6
+
+    parameter: Parent::OutOfLineChild const *
+  }
+}
+
+function "Parent::OutOfLineChild::get_member" {
+  flags: method getter
+  expression: "member"
+  prototype:
+    int Parent::OutOfLineChild::get_member(void) const;
+  comment:
+    getter for int Parent::OutOfLineChild::member;
+
+  c wrapper "_inCAAAA3_QQ" {
+    flags: has_return
+    return_type: int
+    unique_name: cAAAA3_QQ
+
+    parameter "this" (this): Parent::OutOfLineChild const *
+  }
+}
+
+element "Parent::OutOfLineChild::member" {
+  type: int
+  flags: has_getter has_setter
+  getter: Parent::OutOfLineChild::get_member
+  setter: Parent::OutOfLineChild::set_member
+}
+
+function "Parent::OutOfLineChild::set_member" {
+  flags: method setter
+  expression: "member"
+  prototype:
+    void Parent::OutOfLineChild::set_member(int value);
+  comment:
+    setter for int Parent::OutOfLineChild::member;
+
+  c wrapper "_inCAAAAdj2I" {
+    return_type: void
+    unique_name: cAAAAdj2I
+
+    parameter "this" (this): Parent::OutOfLineChild *
+    parameter "value": int
+  }
+}
+
+function "Parent::OutOfLineChild::~OutOfLineChild" {
+  flags: method destructor
+  prototype:
+    Parent::OutOfLineChild::~OutOfLineChild(void);
+}
+
+function "Parent::Parent" {
+  flags: method constructor
+  prototype:
+    inline Parent::Parent(void) = default;
+    inline Parent::Parent(Parent const &) = default;
+
+  c wrapper "_inCAAAAuhpT" {
+    flags: caller_manages has_return
+    return_type: Parent *
+    unique_name: cAAAAuhpT
+  }
+  c wrapper "_inCAAAA1u17" {
+    flags: caller_manages has_return copy_constructor
+    return_type: Parent *
+    unique_name: cAAAA1u17
+
+    parameter: Parent const *
+  }
+}
+
+function "Parent::~Parent" {
+  flags: method destructor
+  prototype:
+    Parent::~Parent(void);
+}
+
+type "int" {
+  flags: atomic fully_defined
+  atomic_token: int
+}
+
+type "void" {
+  flags: atomic fully_defined
+  atomic_token: void
+}

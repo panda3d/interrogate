@@ -1,0 +1,104 @@
+version: 3.3
+
+index:
+ - wrapper for Vector::Vector
+ - wrapper for Vector::Vector
+ - wrapper for Vector::operator []
+ - wrapper for Vector::operator []=
+ - function Vector::operator []
+ - function Vector::operator []=
+ - function Vector::Vector
+ - function Vector::~Vector
+ - type Vector
+ - type Vector *
+ - type Vector const *
+ - type Vector const
+ - type int
+ - type void
+
+type "Vector" {
+  flags: global class fully_defined implicit_destructor
+
+  constructor: Vector
+  destructor: ~Vector
+  method: operator []
+  method: operator []=
+}
+
+type "Vector *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Vector
+}
+
+type "Vector const" {
+  flags: wrapped const fully_defined
+  wrapped_type: Vector
+}
+
+type "Vector const *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Vector const
+}
+
+function "Vector::Vector" {
+  flags: method constructor
+  prototype:
+    inline Vector::Vector(void) = default;
+    inline Vector::Vector(Vector const &) = default;
+
+  python wrapper {
+    flags: caller_manages has_return
+    return_type: Vector *
+  }
+  python wrapper {
+    flags: caller_manages has_return copy_constructor
+    return_type: Vector *
+
+    parameter: Vector const *
+  }
+}
+
+function "Vector::operator []" {
+  flags: method
+  prototype:
+    int Vector::operator [](int n) const;
+    int &Vector::operator [](int n);
+
+  python wrapper {
+    flags: has_return
+    return_type: int
+
+    parameter "this" (this): Vector const *
+    parameter "n": int
+  }
+}
+
+function "Vector::operator []=" {
+  flags: method item assignment
+  prototype:
+    void Vector::operator []=(int n, int const &assign_val);
+
+  python wrapper {
+    return_type: void
+
+    parameter "this" (this): Vector *
+    parameter "n": int
+    parameter "assign_val": int
+  }
+}
+
+function "Vector::~Vector" {
+  flags: method destructor
+  prototype:
+    Vector::~Vector(void);
+}
+
+type "int" {
+  flags: atomic fully_defined
+  atomic_token: int
+}
+
+type "void" {
+  flags: atomic fully_defined
+  atomic_token: void
+}

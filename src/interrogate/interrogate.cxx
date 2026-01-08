@@ -32,6 +32,7 @@ CPPParser parser;
 Filename output_code_filename;
 Filename output_include_filename;
 Filename output_data_filename;
+Filename output_text_filename;
 Filename source_file_directory;
 string output_data_basename;
 bool output_module_specific = false;
@@ -62,6 +63,7 @@ static const char *short_options = "I:S:D:F:vh";
 enum CommandOptions {
   CO_oc = 256,
   CO_od,
+  CO_oh,
   CO_srcdir,
   CO_module,
   CO_library,
@@ -90,6 +92,7 @@ enum CommandOptions {
 static struct option long_options[] = {
   { "oc", required_argument, nullptr, CO_oc },
   { "od", required_argument, nullptr, CO_od },
+  { "oh", required_argument, nullptr, CO_oh },
   { "srcdir", required_argument, nullptr, CO_srcdir },
   { "module", required_argument, nullptr, CO_module },
   { "library", required_argument, nullptr, CO_library },
@@ -366,6 +369,11 @@ main(int argc, char **argv) {
       output_data_filename.make_absolute();
       break;
 
+    case CO_oh:
+      output_text_filename = Filename::from_os_specific(optarg);
+      output_text_filename.make_absolute();
+      break;
+
     case CO_srcdir:
       source_file_directory = Filename::from_os_specific(optarg);
       source_file_directory.make_absolute();
@@ -489,6 +497,7 @@ main(int argc, char **argv) {
 
   output_code_filename.set_text();
   output_data_filename.set_text();
+  output_text_filename.set_text();
 // output_include_filename.set_text();
   output_data_basename = output_data_filename.get_basename();
 
@@ -652,6 +661,18 @@ main(int argc, char **argv) {
       status = -1;
     } else {
       InterrogateDatabase::get_ptr()->write(output_data, def);
+    }
+  }
+
+  if (!output_text_filename.empty()) {
+    std::ofstream output_text;
+    output_text_filename.open_write(output_text);
+
+    if (output_text.fail()) {
+      nout << "Unable to write to " << output_text_filename << "\n";
+      status = -1;
+    } else {
+      InterrogateDatabase::get_ptr()->write_text(output_text);
     }
   }
 

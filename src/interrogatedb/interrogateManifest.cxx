@@ -14,6 +14,38 @@
 #include "interrogateManifest.h"
 #include "indexRemapper.h"
 #include "interrogate_datafile.h"
+#include "interrogateDatabase.h"
+#include "indent.h"
+
+/**
+ * Formats the manifest in a human-readable manner.
+ */
+void InterrogateManifest::
+write(std::ostream &out, int indent_level) const {
+  indent(out, indent_level) << "manifest ";
+  write_names(out);
+  out << " {\n";
+
+  InterrogateDatabase *idb = InterrogateDatabase::get_ptr();
+  if (has_type()) {
+    indent(out, indent_level) << "  type: " << idb->get_type(_type).get_scoped_name() << "\n";
+  }
+
+  if (!_definition.empty()) {
+    indent(out, indent_level) << "  definition: " << _definition << "\n";
+  }
+
+  if (has_int_value()) {
+    indent(out, indent_level) << "  int_value: " << _int_value << "\n";
+  }
+
+  if (_getter != 0) {
+    out << "\n";
+    idb->get_function(_getter).write(out, indent_level + 2, "getter");
+  }
+
+  indent(out, indent_level) << "}\n";
+}
 
 /**
  * Formats the InterrogateManifest data for output to a data file.

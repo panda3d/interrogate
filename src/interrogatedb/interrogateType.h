@@ -113,6 +113,8 @@ public:
   void output(std::ostream &out) const;
   void input(std::istream &in);
 
+  void write(std::ostream &out, int indent_level = 0) const;
+
   void remap_indices(const IndexRemapper &remap);
 
 private:

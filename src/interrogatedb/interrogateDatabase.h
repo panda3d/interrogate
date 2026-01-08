@@ -106,6 +106,8 @@ public:
   int remap_indices(int first_index);
   int remap_indices(int first_index, IndexRemapper &remap);
 
+  void write_text(std::ostream &out) const;
+
   void write(std::ostream &out, InterrogateModuleDef *def) const;
   bool read(std::istream &in, InterrogateModuleDef *def);
 

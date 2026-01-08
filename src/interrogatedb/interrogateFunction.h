@@ -57,6 +57,8 @@ public:
   INLINE int number_of_python_wrappers() const;
   INLINE FunctionWrapperIndex get_python_wrapper(int n) const;
 
+  void write(std::ostream &out, int indent_level = 0, const char *tag = "function") const;
+
   void output(std::ostream &out) const;
   void input(std::istream &in);
 

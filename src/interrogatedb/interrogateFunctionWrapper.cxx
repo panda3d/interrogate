@@ -14,6 +14,8 @@
 #include "interrogateFunctionWrapper.h"
 #include "indexRemapper.h"
 #include "interrogate_datafile.h"
+#include "interrogateDatabase.h"
+#include "indent.h"
 
 #include <algorithm>
 
@@ -36,6 +38,92 @@ void InterrogateFunctionWrapper::Parameter::
 input(istream &in) {
   idf_input_string(in, _name);
   in >> _parameter_flags >> _type;
+}
+
+/**
+ * Formats the function wrapper in a human-readable manner.
+ */
+void InterrogateFunctionWrapper::
+write(std::ostream &out, int indent_level, const char *tag) const {
+  indent(out, indent_level) << tag;
+  if (has_name()) {
+    out << " ";
+    write_names(out);
+  }
+  out << " {\n";
+
+  if (_flags != 0) {
+    indent(out, indent_level) << "  flags:";
+    if (_flags & F_caller_manages) {
+      out << " caller_manages";
+    }
+    if (_flags & F_has_return) {
+      out << " has_return";
+    }
+    if (_flags & F_callable_by_name) {
+      out << " callable_by_name";
+    }
+    if (_flags & F_copy_constructor) {
+      out << " copy_constructor";
+    }
+    if (_flags & F_coerce_constructor) {
+      out << " coerce_constructor";
+    }
+    if (_flags & F_extension) {
+      out << " extension";
+    }
+    if (_flags & F_deprecated) {
+      out << " deprecated";
+    }
+    out << "\n";
+  }
+
+  InterrogateDatabase *idb = InterrogateDatabase::get_ptr();
+  if (_return_type != 0) {
+    indent(out, indent_level) << "  return_type: " << idb->get_type(_return_type).get_scoped_name() << "\n";
+  }
+
+  if (!_unique_name.empty()) {
+    indent(out, indent_level) << "  unique_name: " << _unique_name << "\n";
+  }
+
+  if (!_comment.empty()) {
+    indent(out, indent_level) << "  comment:";
+    bool next_indent = true;
+    for (char c : _comment) {
+      if (c == '\n') {
+        next_indent = true;
+      } else {
+        if (next_indent) {
+          out << "\n";
+          indent(out, indent_level + 4);
+          next_indent = false;
+        }
+        out << c;
+      }
+    }
+    out << "\n";
+  }
+
+  if (!_parameters.empty()) {
+    out << "\n";
+  }
+  for (const Parameter &param : _parameters) {
+    indent(out, indent_level + 2);
+    out << "parameter";
+    if (param._parameter_flags & PF_has_name) {
+      out << " \"" << param._name << "\"";
+    }
+    if (param._parameter_flags & PF_is_this) {
+      out << " (this)";
+    }
+    if (param._parameter_flags & PF_is_optional) {
+      out << " (optional)";
+    }
+    out << ": " << idb->get_type(param._type).get_scoped_name() << "\n";
+  }
+
+  indent(out, indent_level) << "}\n";
 }
 
 /**

@@ -37,6 +37,7 @@ public:
   INLINE bool has_int_value() const;
   INLINE int get_int_value() const;
 
+  void write(std::ostream &out, int indent_level = 0) const;
   void output(std::ostream &out) const;
   void input(std::istream &in);
 

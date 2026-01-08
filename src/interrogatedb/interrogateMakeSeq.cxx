@@ -14,6 +14,54 @@
 #include "interrogateMakeSeq.h"
 #include "indexRemapper.h"
 #include "interrogate_datafile.h"
+#include "interrogateDatabase.h"
+#include "indent.h"
+
+/**
+ * Formats the make_seq in a human-readable manner.
+ */
+void InterrogateMakeSeq::
+write(std::ostream &out, int indent_level) const {
+  indent(out, indent_level) << "make_seq ";
+  write_names(out);
+  out << " {\n";
+
+  if (!_comment.empty()) {
+    indent(out, indent_level) << "  comment:";
+    bool next_indent = true;
+    for (char c : _comment) {
+      if (c == '\n') {
+        next_indent = true;
+      } else {
+        if (next_indent) {
+          out << "\n";
+          indent(out, indent_level + 4);
+          next_indent = false;
+        }
+        out << c;
+      }
+    }
+    out << "\n";
+  }
+
+  if (_length_getter != 0 || _element_getter != 0) {
+    InterrogateDatabase *idb = InterrogateDatabase::get_ptr();
+    if (_length_getter != 0) {
+      //idb->get_function(_length_getter).write(out, indent_level + 2, "length getter");
+      indent(out, indent_level + 2) << "length_getter: "
+        << idb->get_function(_length_getter).get_scoped_name() << "\n";
+    }
+
+    if (_element_getter != 0) {
+      //out << "\n";
+      //idb->get_function(_element_getter).write(out, indent_level + 2, "element getter");
+      indent(out, indent_level + 2) << "element_getter: "
+        << idb->get_function(_element_getter).get_scoped_name() << "\n";
+    }
+  }
+
+  indent(out, indent_level) << "}\n";
+}
 
 /**
  * Formats the InterrogateMakeSeq data for output to a data file.

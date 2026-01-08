@@ -58,6 +58,7 @@ public:
   INLINE FunctionIndex get_length_function() const;
   INLINE bool is_mapping() const;
 
+  void write(std::ostream &out, int indent_level = 0) const;
   void output(std::ostream &out) const;
   void input(std::istream &in);
 
