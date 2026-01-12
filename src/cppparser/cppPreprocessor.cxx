@@ -63,6 +63,7 @@ static const std::unordered_map<std::string, int> keywords = {
   {"char16_t", KW_CHAR16_T},
   {"char32_t", KW_CHAR32_T},
   {"class", KW_CLASS},
+  {"concept", KW_CONCEPT},
   {"const", KW_CONST},
   {"__const", KW_CONST},
   {"__const__", KW_CONST},
@@ -133,6 +134,7 @@ static const std::unordered_map<std::string, int> keywords = {
   {"__restrict", KW_RESTRICT},
   {"__restrict__", KW_RESTRICT},
   {"return", KW_RETURN},
+  {"requires", KW_REQUIRES},
   {"short", KW_SHORT},
   {"signed", KW_SIGNED},
   {"sizeof", KW_SIZEOF},
@@ -141,6 +143,7 @@ static const std::unordered_map<std::string, int> keywords = {
   {"static_cast", KW_STATIC_CAST},
   {"struct", KW_STRUCT},
   {"template", KW_TEMPLATE},
+  {"this", KW_THIS},
   {"thread_local", KW_THREAD_LOCAL},
   {"throw", KW_THROW},
   {"true", KW_TRUE},
@@ -533,8 +536,12 @@ get_next_token0() {
       // parameters.
       CPPDeclaration *decl = ident->find_template(current_scope, global_scope);
       if (decl != nullptr) {
-        ident->_names.back().set_templ
-          (nested_parse_template_instantiation(decl->get_template_scope()));
+        if (decl->as_concept() != nullptr) {
+          nested_skip_template_instantiation(decl->get_template_scope());
+        } else {
+          ident->_names.back().set_templ
+            (nested_parse_template_instantiation(decl->get_template_scope()));
+        }
         token = internal_get_next_token();
       //} else {
       //  error(string("unknown template '") + ident->get_fully_scoped_name() + "'", loc);
@@ -591,8 +598,12 @@ get_next_token0() {
         CPPDeclaration *decl =
           ident->find_template(current_scope, global_scope);
         if (decl != nullptr) {
-          ident->_names.back().set_templ
-            (nested_parse_template_instantiation(decl->get_template_scope()));
+          if (decl->as_concept() != nullptr) {
+            nested_skip_template_instantiation(decl->get_template_scope());
+          } else {
+            ident->_names.back().set_templ
+              (nested_parse_template_instantiation(decl->get_template_scope()));
+          }
           token = internal_get_next_token();
         } else {
           error(string("unknown template '") + ident->get_fully_scoped_name() + "'", loc);
@@ -614,6 +625,9 @@ get_next_token0() {
       } else {
         token_type = TYPENAME_IDENTIFIER;
       }
+    }
+    else if (decl != nullptr && decl->as_concept() != nullptr) {
+      token_type = CONCEPT_IDENTIFIER;
     }
 
     _last_token_loc = loc;
@@ -3246,6 +3260,36 @@ nested_parse_template_instantiation(CPPTemplateScope *scope) {
   return actual_params;
 }
 
+/**
+ *
+ */
+void CPPPreprocessor::
+nested_skip_template_instantiation(CPPTemplateScope *scope) {
+  assert(scope != nullptr);
+
+  State old_state = _state;
+  int old_nesting = _paren_nesting;
+  bool old_parsing_params = _parsing_template_params;
+
+  _state = S_nested;
+  _paren_nesting = 0;
+  _parsing_template_params = true;
+
+  CPPToken token = internal_get_next_token();
+  if (token._token == '>' || token._token == 0) {
+    _parsing_template_params = false;
+  } else {
+    _saved_tokens.push_back(token);
+  }
+
+  if (_parsing_template_params) {
+    skip_to_angle_bracket();
+  }
+
+  _state = old_state;
+  _paren_nesting = old_nesting;
+  _parsing_template_params = old_parsing_params;
+}
 
 /**
  * This is an error-recovery function, called after returning from a nested

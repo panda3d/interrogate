@@ -67,6 +67,9 @@ public:
   virtual void define_namespace(CPPNamespace *scope);
   virtual void add_using(CPPUsing *using_decl, CPPScope *global_scope,
                          CPPPreprocessor *error_sink = nullptr);
+  virtual void add_function_parameters(CPPParameterList *parameters,
+                                       CPPScope *global_scope,
+                                       CPPPreprocessor *error_sink = nullptr);
 
   virtual bool is_fully_specified() const;
 

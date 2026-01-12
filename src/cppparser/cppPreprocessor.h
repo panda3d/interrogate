@@ -179,6 +179,7 @@ private:
 
   CPPTemplateParameterList *
   nested_parse_template_instantiation(CPPTemplateScope *scope);
+  void nested_skip_template_instantiation(CPPTemplateScope *scope);
   void skip_to_end_nested();
   void skip_to_angle_bracket();
 

@@ -50,6 +50,7 @@ class CPPMakeProperty;
 class CPPMakeSeq;
 class CPPClosureType;
 class CPPClassTemplateParameter;
+class CPPConcept;
 class CPPTBDType;
 class CPPScope;
 class CPPTemplateScope;
@@ -73,6 +74,7 @@ public:
     ST_using,
     ST_make_property,
     ST_make_seq,
+    ST_concept,
 
     // Subtypes of CPPType
     ST_simple,
@@ -146,6 +148,7 @@ public:
   virtual CPPMakeProperty *as_make_property();
   virtual CPPMakeSeq *as_make_seq();
   virtual CPPClosureType *as_closure_type();
+  virtual CPPConcept *as_concept();
 
   inline const CPPInstance *as_instance() const {
     return ((CPPDeclaration *)this)->as_instance();
@@ -215,6 +218,9 @@ public:
   }
   inline const CPPClosureType *as_closure_type() const {
     return ((CPPDeclaration *)this)->as_closure_type();
+  }
+  inline const CPPConcept *as_concept() const {
+    return ((CPPDeclaration *)this)->as_concept();
   }
 
   CPPVisibility _vis;

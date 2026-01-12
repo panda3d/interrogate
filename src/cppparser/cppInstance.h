@@ -74,6 +74,9 @@ public:
 
     // Used to indicate that this is a parameter pack.
     SC_parameter_pack = 0x40000,
+
+    // Represents a deducing "this" parameter.
+    SC_this_parameter = 0x200000,
   };
 
   CPPInstance(CPPType *type, const std::string &name, int storage_class = 0);

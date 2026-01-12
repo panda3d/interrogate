@@ -31,6 +31,7 @@
 #include "cppConstType.h"
 #include "cppUsing.h"
 #include "cppBisonDefs.h"
+#include "cppParameterList.h"
 #include "indent.h"
 
 using std::ostream;
@@ -352,6 +353,18 @@ add_using(CPPUsing *using_decl, CPPScope *global_scope,
       if (error_sink != nullptr) {
         error_sink->warning("Attempt to use unknown symbol: " + using_decl->_ident->get_fully_scoped_name(), using_decl->_ident->_loc);
       }
+    }
+  }
+}
+
+/**
+ * Defines the given function parameters within the function scope.
+ */
+void CPPScope::
+add_function_parameters(CPPParameterList *parameters, CPPScope *global_scope, CPPPreprocessor *error_sink) {
+  for (CPPInstance *param : parameters->_parameters) {
+    if (param->_ident != nullptr) {
+      handle_declaration(param, global_scope, error_sink);
     }
   }
 }

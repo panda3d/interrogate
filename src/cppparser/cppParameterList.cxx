@@ -13,6 +13,7 @@
 
 #include "cppParameterList.h"
 #include "cppInstance.h"
+#include "cppIdentifier.h"
 
 /**
  *
@@ -216,8 +217,14 @@ output(std::ostream &out, CPPScope *scope, bool parameter_names,
         _parameters[i]->_initializer = nullptr;
       }
 
-      if (parameter_names) {
-        _parameters[i]->output(out, 0, scope, false);
+      if (parameter_names && _parameters[i]->_ident != nullptr) {
+        // Output parameter names in their own scope to ensure that they
+        // aren't printed with a scope prefix.
+        CPPScope *param_scope = nullptr;
+        if (scope != nullptr) {
+          param_scope = _parameters[i]->_ident->get_scope(scope, nullptr);
+        }
+        _parameters[i]->output(out, 0, param_scope, false);
       } else {
         _parameters[i]->_type->output(out, 0, scope, false);
       }

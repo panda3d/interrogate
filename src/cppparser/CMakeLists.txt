@@ -2,7 +2,7 @@ set(CPPPARSER_HEADERS
   cppAttributeList.h
   cppArrayType.h cppBison.yxx cppBisonDefs.h
   cppClassTemplateParameter.h cppCommentBlock.h
-  cppClosureType.h cppConstType.h
+  cppClosureType.h cppConcept.h cppConstType.h
   cppDeclaration.h cppEnumType.h cppExpression.h
   cppExpressionParser.h cppExtensionType.h cppFile.h
   cppFunctionGroup.h cppFunctionType.h cppGlobals.h
@@ -21,8 +21,8 @@ set(CPPPARSER_SOURCES
   cppAttributeList.cxx
   cppArrayType.cxx ${CMAKE_CURRENT_BINARY_DIR}/cppBison.cxx
   cppClassTemplateParameter.cxx
-  cppCommentBlock.cxx cppClosureType.cxx cppConstType.cxx cppDeclaration.cxx
-  cppEnumType.cxx cppExpression.cxx cppExpressionParser.cxx
+  cppCommentBlock.cxx cppConcept.cxx cppClosureType.cxx cppConstType.cxx
+  cppDeclaration.cxx cppEnumType.cxx cppExpression.cxx cppExpressionParser.cxx
   cppExtensionType.cxx cppFile.cxx cppFunctionGroup.cxx
   cppFunctionType.cxx cppGlobals.cxx cppIdentifier.cxx
   cppInstance.cxx cppInstanceIdentifier.cxx

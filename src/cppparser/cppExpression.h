@@ -22,6 +22,7 @@ class CPPIdentifier;
 class CPPType;
 class CPPPreprocessor;
 class CPPFunctionGroup;
+class CPPParameterList;
 
 /**
  *
@@ -65,6 +66,7 @@ public:
     T_typeid_expr,
     T_type_trait,
     T_lambda,
+    T_requires_expr,
 
     // These are used when parsing =default and =delete methods.
     T_default,
@@ -94,6 +96,7 @@ public:
   static CPPExpression sizeof_ellipsis_func(CPPIdentifier *ident);
   static CPPExpression alignof_func(CPPType *type);
   static CPPExpression lambda(CPPClosureType *type);
+  static CPPExpression requires_expr(CPPParameterList *parameters = nullptr);
 
   static CPPExpression literal(unsigned long long value, CPPInstance *lit_op);
   static CPPExpression literal(long double value, CPPInstance *lit_op);
@@ -159,6 +162,7 @@ public:
     CPPFunctionGroup *_fgroup;
     CPPIdentifier *_ident;
     CPPClosureType *_closure_type;
+    CPPParameterList *_parameters;
     struct {
       union {
         CPPType *_type;

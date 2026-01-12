@@ -28,6 +28,7 @@
 #include "cppReferenceType.h"
 #include "cppStructType.h"
 #include "cppBison.h"
+#include "cppParameterList.h"
 #include "pdtoa.h"
 
 #include <assert.h>
@@ -478,6 +479,17 @@ lambda(CPPClosureType *type) {
   CPPExpression expr(0);
   expr._type = T_lambda;
   expr._u._closure_type = type;
+  return expr;
+}
+
+/**
+ *
+ */
+CPPExpression CPPExpression::
+requires_expr(CPPParameterList *parameters) {
+  CPPExpression expr(0);
+  expr._type = T_requires_expr;
+  expr._u._parameters = parameters;
   return expr;
 }
 
@@ -968,6 +980,9 @@ evaluate() const {
       abort();
     }
 
+  case T_requires_expr:
+    return Result();
+
   default:
     cerr << "**invalid operand**\n";
     abort();
@@ -1256,6 +1271,9 @@ determine_type() const {
   case T_lambda:
     return _u._closure_type;
 
+  case T_requires_expr:
+    return bool_type;
+
   default:
     cerr << "**invalid operand**\n";
     abort();
@@ -1408,6 +1426,9 @@ is_fully_specified() const {
 
   case T_lambda:
     return _u._closure_type->is_fully_specified();
+
+  case T_requires_expr:
+    return false;
 
   default:
     return true;
@@ -2160,6 +2181,16 @@ output(std::ostream &out, int indent_level, CPPScope *scope, bool) const {
     _u._closure_type->output(out, indent_level, scope, false);
     break;
 
+  case T_requires_expr:
+    out << "requires ";
+    if (_u._parameters != nullptr) {
+      out << '(';
+      _u._parameters->output(out, scope, true);
+      out << ')';
+    }
+    out << " {}";
+    break;
+
   default:
     out << "(** invalid operand type " << (int)_type << " **)";
   }
@@ -2327,6 +2358,10 @@ is_equal(const CPPDeclaration *other) const {
   case T_lambda:
     return _u._closure_type == ot->_u._closure_type;
 
+  case T_requires_expr:
+    // We can't know the bodies (which we don't store) are the same
+    return false;
+
   default:
     cerr << "(** invalid operand type " << (int)_type << " **)";
   }
@@ -2441,6 +2476,9 @@ is_less(const CPPDeclaration *other) const {
 
   case T_lambda:
     return _u._closure_type < ot->_u._closure_type;
+
+  case T_requires_expr:
+    return _u._parameters < ot->_u._parameters;
 
   default:
     cerr << "(** invalid operand type " << (int)_type << " **)";

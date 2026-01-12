@@ -31,6 +31,7 @@
 #include "cppTemplateScope.h"
 #include "cppNamespace.h"
 #include "cppUsing.h"
+#include "cppConcept.h"
 
 using std::stringstream;
 using std::string;
@@ -217,7 +218,7 @@ pop_struct() {
 %token <u.integer> CHAR_TOK
 %token <str> SIMPLE_STRING SIMPLE_IDENTIFIER
 %token <u.expr> STRING_LITERAL CUSTOM_LITERAL
-%token <u.identifier> IDENTIFIER TYPENAME_IDENTIFIER TYPEPACK_IDENTIFIER SCOPING
+%token <u.identifier> IDENTIFIER TYPENAME_IDENTIFIER CONCEPT_IDENTIFIER TYPEPACK_IDENTIFIER SCOPING
 %token <u.type> TYPEDEFNAME
 
 %token ELLIPSIS
@@ -269,6 +270,7 @@ pop_struct() {
 %token KW_CHAR16_T
 %token KW_CHAR32_T
 %token KW_CLASS
+%token KW_CONCEPT
 %token KW_CONST
 %token KW_CONSTEVAL
 %token KW_CONSTEXPR
@@ -335,6 +337,7 @@ pop_struct() {
 %token KW_REINTERPRET_CAST
 %token KW_RESTRICT
 %token KW_RETURN
+%token KW_REQUIRES
 %token KW_SHORT
 %token KW_SIGNED
 %token KW_SIZEOF
@@ -343,6 +346,7 @@ pop_struct() {
 %token KW_STATIC_CAST
 %token KW_STRUCT
 %token KW_TEMPLATE
+%token KW_THIS
 %token KW_THREAD_LOCAL
 %token KW_THROW
 %token KW_TRUE
@@ -371,6 +375,7 @@ pop_struct() {
 %type <attr_list> attribute_specifiers
 %type <attr_list> attribute_specifier
 %type <u.integer> storage_class
+%type <u.instance> constructor_or_deduction_guide
 %type <u.instance> constructor_prototype
 %type <u.instance> function_prototype
 %type <u.integer> function_post
@@ -418,6 +423,7 @@ pop_struct() {
 %type <u.identifier> name
 %type <u.identifier> name_no_final
 %type <u.expr> string_literal
+%type <u.boolean> optional_this
 
 /* We need to treat KW_OPERATOR as a scopable keyword. */
 %type <u.identifier> KW_OPERATOR
@@ -434,7 +440,7 @@ pop_struct() {
 
 /* Precedence rules. */
 
-%left IDENTIFIER TYPENAME_IDENTIFIER TYPEDEFNAME KW_ENUM ELLIPSIS KW_OPERATOR KW_TYPENAME KW_INT KW_SHORT KW_UNSIGNED KW_SIGNED KW_LONG KW_FLOAT KW_DOUBLE KW_CHAR KW_WCHAR_T KW_CHAR8_T KW_CHAR16_T KW_CHAR32_T KW_BOOL
+%left IDENTIFIER TYPENAME_IDENTIFIER CONCEPT_IDENTIFIER TYPEDEFNAME KW_ENUM ELLIPSIS KW_OPERATOR KW_TYPENAME KW_INT KW_SHORT KW_UNSIGNED KW_SIGNED KW_LONG KW_FLOAT KW_DOUBLE KW_CHAR KW_WCHAR_T KW_CHAR8_T KW_CHAR16_T KW_CHAR32_T KW_BOOL
 
 %left '{' ',' ';'
 
@@ -535,6 +541,7 @@ declaration:
         | extern_c
         | namespace_declaration
         | friend_declaration
+        | concept_declaration
         | KW_TYPEDEF typedef_declaration
         | KW_BEGIN_PUBLISH
 {
@@ -976,6 +983,14 @@ friend_declaration:
         ;
 
 
+concept_declaration:
+        KW_CONCEPT name '=' const_expr ';'
+{
+  current_scope->add_declaration(new CPPConcept($2, $4), global_scope, current_lexer, @1);
+}
+        ;
+
+
 storage_class:
         empty
 {
@@ -1145,21 +1160,11 @@ type_like_declaration:
 
   current_scope->add_declaration($2, global_scope, current_lexer, @2);
 }
-        | storage_class constructor_prototype
+        | storage_class constructor_or_deduction_guide
 {
   if ($2 != nullptr) {
-    // Push the scope so that the initializers can make use of things defined
-    // in the class body.
-    push_scope($2->get_scope(current_scope, global_scope));
     $2->_storage_class |= (current_storage_class | $1);
-  }
-}
-        maybe_initialize_or_constructor_body
-{
-  if ($2 != nullptr) {
-    pop_scope();
     current_scope->add_declaration($2, global_scope, current_lexer, @2);
-    $2->set_initializer($4);
   }
 }
         | storage_class function_prototype maybe_initialize_or_function_body
@@ -1175,6 +1180,34 @@ type_like_declaration:
         /* We don't need to include a rule for variables that point to
            functions, because we get those from the function_prototype
            definition. */
+        ;
+
+constructor_or_deduction_guide:
+        constructor_prototype
+{
+  if ($1 != nullptr) {
+    // Push the scope so that the initializers can make use of things defined
+    // in the class body.
+    push_scope($1->get_scope(current_scope, global_scope));
+  }
+}
+        maybe_initialize_or_constructor_body
+{
+  if ($1 != nullptr) {
+    pop_scope();
+    $1->set_initializer($3);
+  }
+}
+        | deduction_guide
+{
+  // Deduction guides look a lot like constructors at first, so they are
+  // handled here, but we don't do anything with them.
+  $$ = nullptr;
+}
+        ;
+
+deduction_guide:
+        constructor_prototype POINTSAT TYPENAME_IDENTIFIER ';'
         ;
 
 multiple_instance_identifiers:
@@ -1274,7 +1307,12 @@ constructor_prototype:
 
   push_scope(scope);
 }
-        function_parameter_list ')' function_post optional_attributes
+        function_parameter_list
+{
+  // Define the parameters in the function's scope before we parse the suffix.
+  current_scope->add_function_parameters($4, global_scope, current_lexer);
+}
+        ')' function_post optional_attributes optional_requires_clause
 {
   CPPScope *scope = $1->get_scope(current_scope, global_scope);
   CPPType *type;
@@ -1296,7 +1334,7 @@ constructor_prototype:
   pop_scope();
 
   CPPInstanceIdentifier *ii = new CPPInstanceIdentifier($1);
-  ii->add_func_modifier($4, $6, nullptr, $7);
+  ii->add_func_modifier($4, $7, nullptr, $8);
   ii->add_attributes(current_attributes);
 
   $$ = new CPPInstance(type, ii, 0, @1.file);
@@ -1316,7 +1354,12 @@ constructor_prototype:
 
   push_scope(scope);
 }
-        function_parameter_list ')' function_post optional_attributes
+        function_parameter_list
+{
+  // Define the parameters in the function's scope before we parse the suffix.
+  current_scope->add_function_parameters($7, global_scope, current_lexer);
+}
+        ')' function_post optional_attributes optional_requires_clause
 {
   pop_scope();
   CPPType *type = $1->find_type(current_scope, global_scope, false, current_lexer);
@@ -1326,7 +1369,7 @@ constructor_prototype:
   assert(type != nullptr);
 
   CPPInstanceIdentifier *ii = new CPPInstanceIdentifier($3);
-  ii->add_func_modifier($7, $9, nullptr, $10);
+  ii->add_func_modifier($7, $10, nullptr, $11);
   ii->add_attributes(current_attributes);
 
   $$ = new CPPInstance(type, ii, 0, @1.file);
@@ -1344,9 +1387,15 @@ constructor_prototype:
 
   push_scope(scope);
 }
-        function_parameter_list ')' function_post optional_attributes
+        function_parameter_list
+{
+  // Define the parameters in the function's scope before we parse the suffix.
+  current_scope->add_function_parameters($4, global_scope, current_lexer);
+}
+        ')' function_post optional_attributes optional_requires_clause
 {
   pop_scope();
+
   CPPType *type;
   if ($1->get_simple_name() == current_scope->get_simple_name()) {
     // This is a constructor, and has no return.
@@ -1358,7 +1407,7 @@ constructor_prototype:
   }
 
   CPPInstanceIdentifier *ii = new CPPInstanceIdentifier($1);
-  ii->add_func_modifier($4, $6, nullptr, $7);
+  ii->add_func_modifier($4, $7, nullptr, $8);
   ii->add_attributes(current_attributes);
 
   $$ = new CPPInstance(type, ii, 0, @1.file);
@@ -1372,7 +1421,12 @@ function_prototype:
 {
   push_scope($2->get_scope(current_scope, global_scope));
 }
-        function_parameter_list ')' function_post optional_attributes
+        function_parameter_list
+{
+  // Define the parameters in the function's scope before we parse the suffix.
+  current_scope->add_function_parameters($5, global_scope, current_lexer);
+}
+        ')' function_post optional_attributes optional_requires_clause
 {
   pop_scope();
   if ($2->is_scoped()) {
@@ -1386,7 +1440,7 @@ function_prototype:
     type = new CPPSimpleType(CPPSimpleType::T_void);
 
     CPPInstanceIdentifier *ii = new CPPInstanceIdentifier(ident);
-    ii->add_func_modifier($5, $7, nullptr, $8);
+    ii->add_func_modifier($5, $8, nullptr, $9);
     ii->add_attributes(current_attributes);
 
     $$ = new CPPInstance(type, ii, 0, @2.file);
@@ -1403,7 +1457,12 @@ function_prototype:
 {
   push_scope($4->get_scope(current_scope, global_scope));
 }
-        function_parameter_list ')' function_post optional_attributes maybe_trailing_return_type
+        function_parameter_list
+{
+  // Define the parameters in the function's scope before we parse the suffix.
+  current_scope->add_function_parameters($8, global_scope, current_lexer);
+}
+        ')' function_post optional_attributes maybe_trailing_return_type optional_requires_clause
 {
   pop_scope();
   CPPType *type = $1->find_type(current_scope, global_scope, false, current_lexer);
@@ -1414,7 +1473,7 @@ function_prototype:
 
   CPPInstanceIdentifier *ii = $4;
   ii->add_modifier(IIT_pointer);
-  ii->add_func_modifier($8, $10, nullptr, $11);
+  ii->add_func_modifier($8, $11, nullptr, $12);
   ii->add_attributes(current_attributes);
   $$ = new CPPInstance(type, ii, 0, @1.file);
 }
@@ -1422,7 +1481,12 @@ function_prototype:
 {
   push_scope($5->get_scope(current_scope, global_scope));
 }
-        function_parameter_list ')' function_post optional_attributes maybe_trailing_return_type
+        function_parameter_list
+{
+  // Define the parameters in the function's scope before we parse the suffix.
+  current_scope->add_function_parameters($9, global_scope, current_lexer);
+}
+        ')' function_post optional_attributes maybe_trailing_return_type optional_requires_clause
 {
   pop_scope();
   CPPType *type = $1->find_type(current_scope, global_scope, false, current_lexer);
@@ -1433,7 +1497,7 @@ function_prototype:
 
   CPPInstanceIdentifier *ii = $5;
   ii->add_scoped_pointer_modifier($3);
-  ii->add_func_modifier($9, $11, nullptr, $12);
+  ii->add_func_modifier($9, $12, nullptr, $13);
   ii->add_attributes(current_attributes);
   $$ = new CPPInstance(type, ii, 0, @1.file);
 }
@@ -1445,7 +1509,12 @@ function_prototype:
     push_scope($1->get_scope(current_scope, global_scope));
   }
 }
-        function_parameter_list ')' function_post
+        function_parameter_list
+{
+  // Define the parameters in the function's scope before we parse the suffix.
+  current_scope->add_function_parameters($6, global_scope, current_lexer);
+}
+        ')' function_post
 {
   if ($1 != nullptr) {
     pop_scope();
@@ -1468,7 +1537,7 @@ function_prototype:
     ident->add_name(name);
   }
   $$ = CPPInstance::make_typecast_function
-    (new CPPInstance($2, $3, 0, @3.file), ident, $6, $8);
+    (new CPPInstance($2, $3, 0, @3.file), ident, $6, $9);
   $$->_attributes.add_attributes_from(current_attributes);
 }
         | KW_OPERATOR KW_CONST type not_paren_formal_parameter_identifier '('
@@ -1477,7 +1546,12 @@ function_prototype:
     push_scope($1->get_scope(current_scope, global_scope));
   }
 }
-        function_parameter_list ')' function_post
+        function_parameter_list
+{
+  // Define the parameters in the function's scope before we parse the suffix.
+  current_scope->add_function_parameters($7, global_scope, current_lexer);
+}
+        ')' function_post
 {
   if ($1 != nullptr) {
     pop_scope();
@@ -1492,7 +1566,7 @@ function_prototype:
   $4->add_modifier(IIT_const);
   $4->add_attributes(current_attributes);
   $$ = CPPInstance::make_typecast_function
-    (new CPPInstance($3, $4, 0, @4.file), ident, $7, $9);
+    (new CPPInstance($3, $4, 0, @4.file), ident, $7, $10);
 }
 
 /* Not actually a function prototype, but maybe a template
@@ -1739,10 +1813,38 @@ function_operator:
 }
         ;
 
+
+constraint_expr:
+        constraint_or_expr
+        ;
+
+constraint_or_expr:
+        constraint_and_expr
+        | constraint_or_expr OROR constraint_and_expr
+        ;
+
+constraint_and_expr:
+        constraint_primary
+        | constraint_and_expr ANDAND constraint_primary
+        ;
+
+constraint_primary:
+        '(' const_expr ')'
+        | KW_REQUIRES '{' code '}'
+        | KW_REQUIRES '(' function_parameter_list ')' '{' code '}'
+        | const_operand
+        ;
+
+optional_requires_clause:
+        empty
+        | KW_REQUIRES constraint_expr
+        ;
+
 more_template_declaration:
         type_like_declaration
         | template_declaration
         | friend_declaration
+        | concept_declaration
         ;
 
 template_declaration:
@@ -1751,7 +1853,7 @@ template_declaration:
 {
   push_scope(new CPPTemplateScope(current_scope));
 }
-        '<' template_formal_parameters '>' more_template_declaration
+        '<' template_formal_parameters '>' optional_requires_clause more_template_declaration
 {
   pop_scope();
 }
@@ -1782,6 +1884,7 @@ template_nonempty_formal_parameters:
 typename_keyword:
         KW_CLASS
         | KW_TYPENAME
+        | CONCEPT_IDENTIFIER
         ;
 
 template_formal_parameter:
@@ -1982,13 +2085,37 @@ instance_identifier:
 
 
 instance_identifier_and_maybe_trailing_return_type:
-        instance_identifier maybe_trailing_return_type
+        instance_identifier
 {
+  // Push a new scope for the function so that the trailing return type can
+  // refer to it.
+  CPPParameterList *parameters = $1->get_function_parameters();
+  if ($1->_ident != nullptr && parameters != nullptr) {
+    // Create a scope for this function.
+    CPPScope *scope = new CPPScope($1->get_scope(current_scope, global_scope),
+                                   $1->_ident->_names.back(), V_private);
+
+    // It still needs to be able to pick up any template arguments, if this is
+    // a definition for a method template.  Add a fake "using" declaration to
+    // accomplish this.
+    scope->_using.insert(current_scope);
+
+    scope->add_function_parameters(parameters, current_scope, current_lexer);
+
+    push_scope(scope);
+  } else {
+    push_scope(current_scope);
+  }
+}
+        maybe_trailing_return_type optional_requires_clause
+{
+  pop_scope();
+
   // This is handled a bit awkwardly right now.  Ideally it'd be wrapped
   // up in the instance_identifier rule, but then more needs to happen in
   // order to avoid shift/reduce conflicts.
-  if ($2 != nullptr) {
-    $1->add_trailing_return_type($2);
+  if ($3 != nullptr) {
+    $1->add_trailing_return_type($3);
   }
   $$ = $1;
 }
@@ -2195,30 +2322,47 @@ structure_init_body:
         | structure_init_body ',' '{' structure_init '}'
         ;
 
-function_parameter:
-        optional_attributes storage_class type formal_parameter_identifier maybe_initialize
+optional_this:
+        empty
 {
-  if ($2 & CPPInstance::SC_const) {
-    $4->add_modifier(IIT_const);
-  }
-  if ($2 & CPPInstance::SC_volatile) {
-    $4->add_modifier(IIT_volatile);
-  }
-  $4->add_attributes($1);
-  $$ = new CPPInstance($3, $4, 0, @4.file);
-  $$->set_initializer($5);
+  $$ = false;
 }
-        | optional_attributes storage_class type_pack parameter_pack_identifier maybe_initialize
+        | KW_THIS
 {
-  if ($2 & CPPInstance::SC_const) {
-    $4->add_modifier(IIT_const);
+  $$ = true;
+}
+        ;
+
+function_parameter:
+        optional_attributes optional_this storage_class type formal_parameter_identifier maybe_initialize
+{
+  if ($3 & CPPInstance::SC_const) {
+    $5->add_modifier(IIT_const);
   }
-  if ($2 & CPPInstance::SC_volatile) {
-    $4->add_modifier(IIT_volatile);
+  if ($3 & CPPInstance::SC_volatile) {
+    $5->add_modifier(IIT_volatile);
   }
-  $4->add_attributes($1);
-  $$ = new CPPInstance($3, $4, 0, @4.file);
-  $$->set_initializer($5);
+  $5->add_attributes($1);
+  $$ = new CPPInstance($4, $5, 0, @5.file);
+  $$->set_initializer($6);
+  if ($2) {
+    $$->_storage_class |= CPPInstance::SC_this_parameter;
+  }
+}
+        | optional_attributes optional_this storage_class type_pack parameter_pack_identifier maybe_initialize
+{
+  if ($3 & CPPInstance::SC_const) {
+    $5->add_modifier(IIT_const);
+  }
+  if ($3 & CPPInstance::SC_volatile) {
+    $5->add_modifier(IIT_volatile);
+  }
+  $5->add_attributes($1);
+  $$ = new CPPInstance($4, $5, 0, @5.file);
+  $$->set_initializer($6);
+  if ($2) {
+    $$->_storage_class |= CPPInstance::SC_this_parameter;
+  }
 }
         ;
 
@@ -2646,6 +2790,10 @@ type:
 {
   $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
 }
+        | CONCEPT_IDENTIFIER KW_AUTO
+{
+  $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
+}
         | KW_BUILTIN_VA_LIST
 {
   $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_va_list));
@@ -2769,6 +2917,10 @@ type_decl:
 {
   $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
 }
+        | CONCEPT_IDENTIFIER KW_AUTO
+{
+  $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
+}
         | KW_BUILTIN_VA_LIST
 {
   $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_va_list));
@@ -2833,6 +2985,10 @@ predefined_type:
     yyerror("could not determine type of " + str.str(), @3);
   }
 }
+        | KW_DECLTYPE '(' KW_AUTO ')'
+{
+  $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
+}
         | KW_UNDERLYING_TYPE '(' full_type ')'
 {
   CPPEnumType *enum_type = $3->as_enum_type();
@@ -2844,6 +3000,10 @@ predefined_type:
   }
 }
         | KW_AUTO
+{
+  $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
+}
+        | CONCEPT_IDENTIFIER KW_AUTO
 {
   $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
 }
@@ -3329,6 +3489,7 @@ element:
         | IDENTIFIER
         | TYPENAME_IDENTIFIER
         | TYPEPACK_IDENTIFIER
+        | CONCEPT_IDENTIFIER
         | SCOPING
         | SIMPLE_IDENTIFIER
         | ELLIPSIS | OROR | ANDAND
@@ -3348,10 +3509,10 @@ element:
         | KW_NAMESPACE | KW_NEW | KW_NOEXCEPT | KW_NOEXCEPT_LPAREN | KW_NULLPTR
         | KW_OPERATOR | KW_OVERRIDE | KW_PRIVATE | KW_PROTECTED
         | KW_PUBLIC | KW_PUBLISHED | KW_REGISTER | KW_REINTERPRET_CAST
-        | KW_RESTRICT | KW_RETURN | KW_SHORT | KW_SIGNED | KW_SIZEOF | KW_STATIC
-        | KW_STATIC_ASSERT | KW_STATIC_CAST | KW_STRUCT | KW_TEMPLATE
-        | KW_THREAD_LOCAL | KW_THROW | KW_TRUE | KW_TRY | KW_TYPEDEF
-        | KW_TYPEID | KW_TYPENAME | KW_UNDERLYING_TYPE | KW_UNION
+        | KW_RESTRICT | KW_RETURN | KW_REQUIRES | KW_SHORT | KW_SIGNED
+        | KW_SIZEOF | KW_STATIC | KW_STATIC_ASSERT | KW_STATIC_CAST | KW_STRUCT
+        | KW_TEMPLATE | KW_THIS | KW_THREAD_LOCAL | KW_THROW | KW_TRUE | KW_TRY
+        | KW_TYPEDEF | KW_TYPEID | KW_TYPENAME | KW_UNDERLYING_TYPE | KW_UNION
         | KW_UNSIGNED | KW_USING | KW_VIRTUAL | KW_VOID | KW_VOLATILE
         | KW_WCHAR_T | KW_WHILE
 {
@@ -3863,6 +4024,19 @@ const_expr:
 {
   $$ = $2;
 }
+        | ELLIPSIS
+{
+  // Hack to parse C++17 fold expressions.
+  $$ = new CPPExpression("...");
+}
+        | KW_REQUIRES '{' code '}'
+{
+  $$ = new CPPExpression(CPPExpression::requires_expr());
+}
+        | KW_REQUIRES '(' function_parameter_list ')' '{' code '}'
+{
+  $$ = new CPPExpression(CPPExpression::requires_expr($3));
+}
         ;
 
 const_operand:
@@ -3897,6 +4071,14 @@ const_operand:
         | IDENTIFIER
 {
   $$ = new CPPExpression($1, current_scope, global_scope, current_lexer);
+}
+        | CONCEPT_IDENTIFIER
+{
+  $$ = new CPPExpression($1, current_scope, global_scope, current_lexer);
+}
+        | KW_THIS
+{
+  $$ = new CPPExpression(new CPPIdentifier("this"), current_scope, global_scope, current_lexer);
 }
         | KW_FINAL
 {
@@ -4377,6 +4559,10 @@ name:
 {
   $$ = $1;
 }
+        | CONCEPT_IDENTIFIER
+{
+  $$ = $1;
+}
         | KW_FINAL
 {
   $$ = new CPPIdentifier("final", @1);
@@ -4411,6 +4597,14 @@ name:
 {
   $$ = new CPPIdentifier("default", @1);
 }
+        | KW_CONCEPT
+{
+  $$ = new CPPIdentifier("concept", @1);
+}
+        | KW_THIS
+{
+  $$ = new CPPIdentifier("this", @1);
+}
         ;
 
 
@@ -4430,9 +4624,21 @@ name_no_final:
 {
   $$ = $1;
 }
+        | CONCEPT_IDENTIFIER
+{
+  $$ = $1;
+}
         | KW_OVERRIDE
 {
   $$ = new CPPIdentifier("override", @1);
+}
+        | KW_CONCEPT
+{
+  $$ = new CPPIdentifier("concept", @1);
+}
+        | KW_THIS
+{
+  $$ = new CPPIdentifier("this", @1);
 }
         ;
 

@@ -545,6 +545,10 @@ output(std::ostream &out, int indent_level, CPPScope *scope, bool complete,
     out << _attributes << " ";
   }
 
+  if (_storage_class & SC_this_parameter) {
+    out << "this ";
+  }
+
   if (_storage_class & SC_static) {
     out << "static ";
   }

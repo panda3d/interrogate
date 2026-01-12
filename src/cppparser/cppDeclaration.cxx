@@ -339,6 +339,14 @@ as_closure_type() {
 }
 
 /**
+ *
+ */
+CPPConcept *CPPDeclaration::
+as_concept() {
+  return nullptr;
+}
+
+/**
  * Called by CPPDeclaration to determine whether this type is equivalent to
  * another type of the same type.
  */

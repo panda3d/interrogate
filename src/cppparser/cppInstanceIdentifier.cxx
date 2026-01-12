@@ -232,6 +232,28 @@ get_initializer() const {
 }
 
 /**
+ * Returns the function parameter list that was set for this particular
+ * instance, e.g.  if the instance were:
+ *
+ * int foo(int x);
+ *
+ * this would return the parameter list (int x).  Returns NULL if the instance
+ * did not use a parameter list initializer.
+ */
+CPPParameterList *CPPInstanceIdentifier::
+get_function_parameters() const {
+  Modifiers::const_iterator mi;
+  for (mi = _modifiers.begin(); mi != _modifiers.end(); ++mi) {
+    const Modifier &mod = (*mi);
+    if (mod._type == IIT_func) {
+      return mod._func_params;
+    }
+  }
+
+  return nullptr;
+}
+
+/**
  *
  */
 CPPScope *CPPInstanceIdentifier::

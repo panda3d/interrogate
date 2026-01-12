@@ -101,6 +101,10 @@ output(std::ostream &out) const {
     out << "TYPENAME_IDENTIFIER " << *_lval.u.identifier;
     break;
 
+  case CONCEPT_IDENTIFIER:
+    out << "CONCEPT_IDENTIFIER " << *_lval.u.identifier;
+    break;
+
   case SCOPING:
     out << "SCOPING " << *_lval.u.identifier << "::";
     break;

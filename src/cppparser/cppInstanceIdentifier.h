@@ -70,6 +70,7 @@ public:
   void add_attributes(const CPPAttributeList &attributes);
 
   CPPParameterList *get_initializer() const;
+  CPPParameterList *get_function_parameters() const;
 
   CPPScope *get_scope(CPPScope *current_scope, CPPScope *global_scope,
                       CPPPreprocessor *error_sink = nullptr) const;

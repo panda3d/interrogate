@@ -70,6 +70,7 @@ public:
   union {
     unsigned long long integer;
     long double real;
+    bool boolean;
     CPPScope *scope;
     CPPDeclaration *decl;
     CPPInstance *instance;
