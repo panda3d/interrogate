@@ -210,7 +210,13 @@ test_declaration(CPPDeclaration *decl) {
   }
 
   std::string &comment = decl->_leading_comment->_comment;
-  size_t start = 0;
+  size_t start = comment.size() - 1;
+  while (start > 0 && isspace(comment[start])) {
+    --start;
+  }
+  while (start > 0 && comment[start] != '\n') {
+    --start;
+  }
   while (start < comment.size() && (isspace(comment[start]) || comment[start] == '/' || comment[start] == '*')) {
     ++start;
   }
@@ -240,9 +246,15 @@ test_declaration(CPPDeclaration *decl) {
   decl->output(buf, 0, &parser, true);
   std::string actual = buf.str();
 
+  for (char &c : actual) {
+    if (c == '\n') {
+      c = ' ';
+    }
+  }
+
   int line = decl->_leading_comment->_line_number;
   if (expected == actual) {
-    std::cerr << "\033[1;32mPASS\033[0m (line " << line << "): " << buf.str() << "\n";
+    std::cerr << "\033[1;32mPASS\033[0m (line " << line << "): " << actual << "\n";
     return true;
   } else {
     std::cerr << "\033[1;31mFAIL\033[0m (line " << line << "):\n";
