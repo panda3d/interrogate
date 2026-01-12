@@ -1,0 +1,91 @@
+#pragma once
+
+namespace std {
+  template<class T, class U>
+  concept same_as = requires {};
+
+  template<class Derived, class Base>
+  concept derived_from = requires {};
+
+  template<class From, class To>
+  concept convertible_to = requires {};
+
+  template<class T, class U>
+  concept common_reference_with = requires {};
+
+  template<class T, class U>
+  concept common_with = requires {};
+
+  // arithmetic concepts
+  template<class T>
+  concept integral = requires {};
+  template<class T>
+  concept signed_integral = requires {};
+  template<class T>
+  concept unsigned_integral = requires {};
+  template<class T>
+  concept floating_point = requires {};
+
+  template<class LHS, class RHS>
+  concept assignable_from = requires {};
+
+  template<class T>
+  concept swappable = requires {};
+  template<class T, class U>
+  concept swappable_with = requires {};
+
+  template<class T>
+  concept destructible = requires {};
+
+  template<class T, class... Args>
+  concept constructible_from = requires {};
+
+  template<class T>
+  concept default_initializable = requires {};
+
+  template<class T>
+  concept move_constructible = requires {};
+
+  template<class T>
+  concept copy_constructible = requires {};
+
+  // comparison concepts
+  template<class T>
+  concept equality_comparable = requires {};
+  template<class T, class U>
+  concept equality_comparable_with = requires {};
+
+  template<class T>
+  concept totally_ordered = requires {};
+  template<class T, class U>
+  concept totally_ordered_with = requires {};
+
+  // object concepts
+  template<class T>
+  concept movable = requires {};
+  template<class T>
+  concept copyable = requires {};
+  template<class T>
+  concept semiregular = requires {};
+  template<class T>
+  concept regular = requires {};
+
+  // callable concepts
+  template<class F, class... Args>
+  concept invocable = requires {};
+
+  template<class F, class... Args>
+  concept regular_invocable = requires {};
+
+  template<class F, class... Args>
+  concept predicate = requires {};
+
+  template<class R, class T, class U>
+  concept relation = requires {};
+
+  template<class R, class T, class U>
+  concept equivalence_relation = requires {};
+
+  template<class R, class T, class U>
+  concept strict_weak_order = requires {};
+}
