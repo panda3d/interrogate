@@ -40,13 +40,16 @@ function(add_bison_target output_cxx input_yxx)
 
   if(HAVE_BISON)
     get_source_file_property(input_yxx "${input_yxx}" LOCATION)
+    get_filename_component(input_yxx_basename "${input_yxx}" NAME)
 
     # If we have bison, we can of course just run it.
+    # First copy it to the binary dir so we get relative #line paths.
     add_custom_command(
       OUTPUT ${outputs}
+      COMMAND ${CMAKE_COMMAND} -E copy "${input_yxx}" "${CMAKE_CURRENT_BINARY_DIR}"
       COMMAND ${BISON_EXECUTABLE}
         -o "${output_cxx}" ${arguments}
-        "${input_yxx}"
+        "${input_yxx_basename}"
       MAIN_DEPENDENCY "${input_yxx}"
     )
 
