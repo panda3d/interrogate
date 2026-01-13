@@ -415,6 +415,7 @@ pop_struct() {
 %type <u.simple_type> simple_int_type
 %type <u.simple_type> simple_float_type
 %type <u.simple_type> simple_void_type
+%type <u.simple_type> simple_auto_type
 %type <u.type> class_derivation_name
 %type <u.type> enum_element_type
 %type <u.type> maybe_trailing_return_type
@@ -440,7 +441,7 @@ pop_struct() {
 
 /* Precedence rules. */
 
-%left IDENTIFIER TYPENAME_IDENTIFIER CONCEPT_IDENTIFIER TYPEDEFNAME KW_ENUM ELLIPSIS KW_OPERATOR KW_TYPENAME KW_INT KW_SHORT KW_UNSIGNED KW_SIGNED KW_LONG KW_FLOAT KW_DOUBLE KW_CHAR KW_WCHAR_T KW_CHAR8_T KW_CHAR16_T KW_CHAR32_T KW_BOOL
+%left IDENTIFIER TYPENAME_IDENTIFIER CONCEPT_IDENTIFIER TYPEDEFNAME KW_ENUM ELLIPSIS KW_OPERATOR KW_TYPENAME KW_INT KW_SHORT KW_UNSIGNED KW_SIGNED KW_LONG KW_FLOAT KW_DOUBLE KW_CHAR KW_WCHAR_T KW_CHAR8_T KW_CHAR16_T KW_CHAR32_T KW_BOOL KW_AUTO
 
 %left '{' ',' ';'
 
@@ -2278,6 +2279,10 @@ maybe_initialize_or_constructor_body:
 {
   $$ = new CPPExpression(CPPExpression::get_delete());
 }
+        | '=' KW_DELETE '(' string_literal ')' ';'
+{
+  $$ = new CPPExpression(CPPExpression::get_delete());
+}
         ;
 
 maybe_initialize_or_function_body:
@@ -2298,6 +2303,10 @@ maybe_initialize_or_function_body:
   $$ = new CPPExpression(CPPExpression::get_default());
 }
         | '=' KW_DELETE ';'
+{
+  $$ = new CPPExpression(CPPExpression::get_delete());
+}
+        | '=' KW_DELETE '(' string_literal ')' ';'
 {
   $$ = new CPPExpression(CPPExpression::get_delete());
 }
@@ -2786,10 +2795,6 @@ type:
     $$ = enum_type->get_underlying_type();
   }
 }
-        | KW_AUTO
-{
-  $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
-}
         | CONCEPT_IDENTIFIER KW_AUTO
 {
   $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
@@ -2913,10 +2918,6 @@ type_decl:
     $$ = enum_type->get_underlying_type();
   }
 }
-        | KW_AUTO
-{
-  $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
-}
         | CONCEPT_IDENTIFIER KW_AUTO
 {
   $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
@@ -2998,10 +2999,6 @@ predefined_type:
   } else {
     $$ = enum_type->get_underlying_type();
   }
-}
-        | KW_AUTO
-{
-  $$ = CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
 }
         | CONCEPT_IDENTIFIER KW_AUTO
 {
@@ -3361,6 +3358,7 @@ simple_type:
         simple_int_type
         | simple_float_type
         | simple_void_type
+        | simple_auto_type
         ;
 
 simple_int_type:
@@ -3458,6 +3456,13 @@ simple_void_type:
         KW_VOID
 {
   $$ = new CPPSimpleType(CPPSimpleType::T_void);
+}
+        ;
+
+simple_auto_type:
+        KW_AUTO
+{
+  $$ = new CPPSimpleType(CPPSimpleType::T_auto);
 }
         ;
 
@@ -3692,7 +3697,7 @@ no_angle_bracket_const_expr:
 {
   $$ = new CPPExpression('?', $1, $3, $5);
 }
-        | no_angle_bracket_const_expr '[' const_expr ']'
+        | no_angle_bracket_const_expr '[' const_expr_comma ']'
 {
   $$ = new CPPExpression('[', $1, $3);
 }
@@ -3764,11 +3769,29 @@ const_expr:
   assert(type != nullptr);
   $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
 }
+        | KW_AUTO '(' optional_const_expr_comma ')'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
+  $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
+}
+        | KW_AUTO '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
+}
         | KW_INT '(' optional_const_expr_comma ')'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
+}
+        | KW_INT '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
 }
         | KW_CHAR '(' optional_const_expr_comma ')'
 {
@@ -3776,11 +3799,23 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
+        | KW_CHAR '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
+}
         | KW_WCHAR_T '(' optional_const_expr_comma ')'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_wchar_t));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
+}
+        | KW_WCHAR_T '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_wchar_t));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
 }
         | KW_CHAR8_T '(' optional_const_expr_comma ')'
 {
@@ -3788,11 +3823,23 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char8_t));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
+        | KW_CHAR8_T '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char8_t));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
+}
         | KW_CHAR16_T '(' optional_const_expr_comma ')'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char16_t));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
+}
+        | KW_CHAR16_T '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char16_t));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
 }
         | KW_CHAR32_T '(' optional_const_expr_comma ')'
 {
@@ -3800,11 +3847,23 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char32_t));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
+        | KW_CHAR32_T '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char32_t));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
+}
         | KW_BOOL '(' optional_const_expr_comma ')'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_bool));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
+}
+        | KW_BOOL '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_bool));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
 }
         | KW_SHORT '(' optional_const_expr_comma ')'
 {
@@ -3813,12 +3872,26 @@ const_expr:
                                         CPPSimpleType::F_short));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
+        | KW_SHORT '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
+                                        CPPSimpleType::F_short));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
+}
         | KW_LONG '(' optional_const_expr_comma ')'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
                                         CPPSimpleType::F_long));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
+}
+        | KW_LONG '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
+                                        CPPSimpleType::F_long));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
 }
         | KW_UNSIGNED '(' optional_const_expr_comma ')'
 {
@@ -3827,6 +3900,13 @@ const_expr:
                                         CPPSimpleType::F_unsigned));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
+        | KW_UNSIGNED '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
+                                        CPPSimpleType::F_unsigned));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
+}
         | KW_SIGNED '(' optional_const_expr_comma ')'
 {
   CPPType *type =
@@ -3834,17 +3914,36 @@ const_expr:
                                         CPPSimpleType::F_signed));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
+        | KW_SIGNED '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
+                                        CPPSimpleType::F_signed));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
+}
         | KW_FLOAT '(' optional_const_expr_comma ')'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_float));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
+        | KW_FLOAT '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_float));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
+}
         | KW_DOUBLE '(' optional_const_expr_comma ')'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_double));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
+}
+        | KW_DOUBLE '{' optional_const_expr_comma '}'
+{
+  CPPType *type =
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_float));
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
 }
         | KW_SIZEOF '(' full_type ')' %prec UNARY
 {
@@ -3996,7 +4095,7 @@ const_expr:
 {
   $$ = new CPPExpression('?', $1, $3, $5);
 }
-        | const_expr '[' const_expr ']'
+        | const_expr '[' const_expr_comma ']'
 {
   $$ = new CPPExpression('[', $1, $3);
 }
@@ -4363,7 +4462,7 @@ formal_const_expr:
 {
   $$ = new CPPExpression('?', $1, $3, $5);
 }
-        | formal_const_expr '[' const_expr ']'
+        | formal_const_expr '[' const_expr_comma ']'
 {
   $$ = new CPPExpression('[', $1, $3);
 }
