@@ -4,6 +4,8 @@
  * @date 1999-01-16
  */
 
+%require "3.0"
+
 %{
 
 #include "cppBisonDefs.h"
@@ -59,13 +61,6 @@ static std::vector<int> last_storage_classes;
 static std::vector<CPPStructType *> last_structs;
 
 int yyparse();
-
-#define YYERROR_VERBOSE
-
-static void
-yyerror(const string &msg) {
-  current_lexer->error(msg, current_lexer->_last_token_loc);
-}
 
 static void
 yyerror(YYLTYPE *loc, const string &msg) {
@@ -206,33 +201,38 @@ pop_struct() {
 
 /* This is a bison-specific declaration to enable recursive calls to
    yyparse().  It changes the calling sequence to yylex(), passing
-   pointers to the current yylval and yylloc.  Bison 2.7 introduces a
-   different syntax that will also pass the current yylloc to yyerror,
-   but we have to support Bison versions as old as 2.5 for now. */
-/*%define api.pure full*/
-%pure-parser
+   pointers to the current yylval and yylloc. */
+%define api.pure full
+%define parse.error verbose
+%define parse.lac full
 %locations
 
-%token <u.real> REAL
-%token <u.integer> INTEGER
-%token <u.integer> CHAR_TOK
-%token <str> SIMPLE_STRING SIMPLE_IDENTIFIER
-%token <u.expr> STRING_LITERAL CUSTOM_LITERAL
-%token <u.identifier> IDENTIFIER TYPENAME_IDENTIFIER CONCEPT_IDENTIFIER TYPEPACK_IDENTIFIER SCOPING
-%token <u.type> TYPEDEFNAME
+%token <u.real> REAL "floating-point literal"
+%token <u.integer> INTEGER "integer literal"
+%token <u.integer> CHAR_TOK "character literal"
+%token <str> SIMPLE_STRING "string literal"
+%token <str> SIMPLE_IDENTIFIER
+%token <u.expr> STRING_LITERAL "prefixed string literal"
+%token <u.expr> CUSTOM_LITERAL "user-defined literal"
+%token <u.identifier> IDENTIFIER "identifier"
+%token <u.identifier> TYPENAME_IDENTIFIER "type name"
+%token <u.identifier> CONCEPT_IDENTIFIER "concept name"
+%token <u.identifier> TYPEPACK_IDENTIFIER "type pack"
+%token <u.identifier> SCOPING "scoped name"
+//%token <u.type> TYPEDEFNAME
 
-%token ELLIPSIS
-%token OROR
-%token ANDAND
-%token EQCOMPARE
-%token NECOMPARE
-%token LECOMPARE
-%token GECOMPARE
-%token SPACESHIP
-%token LSHIFT
-%token RSHIFT
-%token POINTSAT_STAR
-%token DOT_STAR
+%token ELLIPSIS "..."
+%token OROR "||"
+%token ANDAND "&&"
+%token EQCOMPARE "=="
+%token NECOMPARE "!="
+%token LECOMPARE "<="
+%token GECOMPARE ">="
+%token SPACESHIP "<=>"
+%token LSHIFT "<<"
+%token RSHIFT ">>"
+%token POINTSAT_STAR "->*"
+%token DOT_STAR ".*"
 %token UNARY
 %token UNARY_NOT
 %token UNARY_NEGATE
@@ -240,129 +240,129 @@ pop_struct() {
 %token UNARY_PLUS
 %token UNARY_STAR
 %token UNARY_REF
-%token POINTSAT
-%token SCOPE
-%token PLUSPLUS
-%token MINUSMINUS
-%token TIMESEQUAL
-%token DIVIDEEQUAL
-%token MODEQUAL
-%token PLUSEQUAL
-%token MINUSEQUAL
-%token OREQUAL
-%token ANDEQUAL
-%token XOREQUAL
-%token LSHIFTEQUAL
-%token RSHIFTEQUAL
-%token ATTR_LEFT
-%token ATTR_RIGHT
+%token POINTSAT "->"
+%token SCOPE "::"
+%token PLUSPLUS "++"
+%token MINUSMINUS "--"
+%token TIMESEQUAL "*="
+%token DIVIDEEQUAL "/="
+%token MODEQUAL "%="
+%token PLUSEQUAL "+="
+%token MINUSEQUAL "-="
+%token OREQUAL "|="
+%token ANDEQUAL "&="
+%token XOREQUAL "^="
+%token LSHIFTEQUAL "<<="
+%token RSHIFTEQUAL ">>="
+%token ATTR_LEFT "[["
+%token ATTR_RIGHT "]]"
 
-%token KW_ALIGNAS
-%token KW_ALIGNOF
-%token KW_AUTO
-%token KW_BEGIN_PUBLISH
-%token KW_BLOCKING
-%token KW_BOOL
-%token KW_BUILTIN_VA_LIST
-%token KW_CATCH
-%token KW_CHAR
-%token KW_CHAR8_T
-%token KW_CHAR16_T
-%token KW_CHAR32_T
-%token KW_CLASS
-%token KW_CONCEPT
-%token KW_CONST
-%token KW_CONSTEVAL
-%token KW_CONSTEXPR
-%token KW_CONSTINIT
-%token KW_CONST_CAST
-%token KW_DECLTYPE
-%token KW_DEFAULT
-%token KW_DELETE
-%token KW_DOUBLE
-%token KW_DYNAMIC_CAST
-%token KW_ELSE
-%token KW_END_PUBLISH
-%token KW_ENUM
-%token KW_EXTENSION
-%token KW_EXTERN
-%token KW_EXPLICIT
-%token KW_EXPLICIT_LPAREN
-%token KW_PUBLISHED
-%token KW_FALSE
-%token KW_FINAL
-%token KW_FLOAT
-%token KW_FRIEND
-%token KW_FOR
-%token KW_GOTO
-%token KW_HAS_VIRTUAL_DESTRUCTOR
-%token KW_IF
-%token KW_INLINE
-%token KW_INT
-%token KW_IS_ABSTRACT
-%token KW_IS_BASE_OF
-%token KW_IS_CLASS
-%token KW_IS_CONSTRUCTIBLE
-%token KW_IS_CONVERTIBLE_TO
-%token KW_IS_DESTRUCTIBLE
-%token KW_IS_EMPTY
-%token KW_IS_ENUM
-%token KW_IS_FINAL
-%token KW_IS_FUNDAMENTAL
-%token KW_IS_POD
-%token KW_IS_POLYMORPHIC
-%token KW_IS_STANDARD_LAYOUT
-%token KW_IS_TRIVIAL
-%token KW_IS_TRIVIALLY_COPYABLE
-%token KW_IS_UNION
-%token KW_LONG
-%token KW_MAKE_MAP_KEYS_SEQ
-%token KW_MAKE_MAP_PROPERTY
-%token KW_MAKE_PROPERTY
-%token KW_MAKE_PROPERTY2
-%token KW_MAKE_SEQ
-%token KW_MAKE_SEQ_PROPERTY
-%token KW_MUTABLE
-%token KW_NAMESPACE
-%token KW_NEW
-%token KW_NOEXCEPT
-%token KW_NOEXCEPT_LPAREN
-%token KW_NULLPTR
-%token KW_OPERATOR
-%token KW_OVERRIDE
-%token KW_PRIVATE
-%token KW_PROTECTED
-%token KW_PUBLIC
-%token KW_REGISTER
-%token KW_REINTERPRET_CAST
-%token KW_RESTRICT
-%token KW_RETURN
-%token KW_REQUIRES
-%token KW_SHORT
-%token KW_SIGNED
-%token KW_SIZEOF
-%token KW_STATIC
-%token KW_STATIC_ASSERT
-%token KW_STATIC_CAST
-%token KW_STRUCT
-%token KW_TEMPLATE
-%token KW_THIS
-%token KW_THREAD_LOCAL
-%token KW_THROW
-%token KW_TRUE
-%token KW_TRY
-%token KW_TYPEDEF
-%token KW_TYPEID
-%token KW_TYPENAME
-%token KW_UNDERLYING_TYPE
-%token KW_UNION
-%token KW_UNSIGNED
-%token KW_USING
-%token KW_VIRTUAL
-%token KW_VOID
-%token KW_VOLATILE
-%token KW_WCHAR_T
-%token KW_WHILE
+%token KW_ALIGNAS "alignas"
+%token KW_ALIGNOF "alignof"
+%token KW_AUTO "auto"
+%token KW_BEGIN_PUBLISH "__begin_publish"
+%token KW_BLOCKING "__blocking"
+%token KW_BOOL "bool"
+%token KW_BUILTIN_VA_LIST "__builtin_va_list"
+%token KW_CATCH "catch"
+%token KW_CHAR "char"
+%token KW_CHAR8_T "char8_t"
+%token KW_CHAR16_T "char16_t"
+%token KW_CHAR32_T "char32_t"
+%token KW_CLASS "class"
+%token KW_CONCEPT "concept"
+%token KW_CONST "const"
+%token KW_CONSTEVAL "consteval"
+%token KW_CONSTEXPR "constexpr"
+%token KW_CONSTINIT "constinit"
+%token KW_CONST_CAST "const_cast"
+%token KW_DECLTYPE "decltype"
+%token KW_DEFAULT "default"
+%token KW_DELETE "delete"
+%token KW_DOUBLE "double"
+%token KW_DYNAMIC_CAST "dynamic_cast"
+%token KW_ELSE "else"
+%token KW_END_PUBLISH "__end_publish"
+%token KW_ENUM "enum"
+%token KW_EXTENSION "__extension"
+%token KW_EXTERN "extern"
+%token KW_EXPLICIT "explicit"
+%token KW_EXPLICIT_LPAREN "explicit("
+%token KW_PUBLISHED "__published"
+%token KW_FALSE "false"
+%token KW_FINAL "final"
+%token KW_FLOAT "float"
+%token KW_FRIEND "friend"
+%token KW_FOR "for"
+%token KW_GOTO "goto"
+%token KW_HAS_VIRTUAL_DESTRUCTOR "__has_virtual_destructor"
+%token KW_IF "if"
+%token KW_INLINE "inline"
+%token KW_INT "int"
+%token KW_IS_ABSTRACT "__is_abstract"
+%token KW_IS_BASE_OF "__is_base_of"
+%token KW_IS_CLASS "__is_class"
+%token KW_IS_CONSTRUCTIBLE "__is_constructible"
+%token KW_IS_CONVERTIBLE_TO "__is_convertible_to"
+%token KW_IS_DESTRUCTIBLE "__is_destructible"
+%token KW_IS_EMPTY "__is_empty"
+%token KW_IS_ENUM "__is_enum"
+%token KW_IS_FINAL "__is_final"
+%token KW_IS_FUNDAMENTAL "__is_fundamental"
+%token KW_IS_POD "__is_pod"
+%token KW_IS_POLYMORPHIC "__is_polymorphic"
+%token KW_IS_STANDARD_LAYOUT "__is_standard_layout"
+%token KW_IS_TRIVIAL "__is_trivial"
+%token KW_IS_TRIVIALLY_COPYABLE "__is_trivially_copyable"
+%token KW_IS_UNION "__is_union"
+%token KW_LONG "long"
+%token KW_MAKE_MAP_KEYS_SEQ "__make_map_keys_seq"
+%token KW_MAKE_MAP_PROPERTY "__make_map_property"
+%token KW_MAKE_PROPERTY "__make_property"
+%token KW_MAKE_PROPERTY2 "__make_property2"
+%token KW_MAKE_SEQ "__make_seq"
+%token KW_MAKE_SEQ_PROPERTY "__make_seq_property"
+%token KW_MUTABLE "mutable"
+%token KW_NAMESPACE "namespace"
+%token KW_NEW "new"
+%token KW_NOEXCEPT "noexcept"
+%token KW_NOEXCEPT_LPAREN "noexcept("
+%token KW_NULLPTR "nullptr"
+%token KW_OPERATOR "operator"
+%token KW_OVERRIDE "override"
+%token KW_PRIVATE "private"
+%token KW_PROTECTED "protected"
+%token KW_PUBLIC "public"
+%token KW_REGISTER "register"
+%token KW_REINTERPRET_CAST "reinterpret_cast"
+%token KW_RESTRICT "__restrict"
+%token KW_RETURN "return"
+%token KW_REQUIRES "requires"
+%token KW_SHORT "short"
+%token KW_SIGNED "signed"
+%token KW_SIZEOF "sizeof"
+%token KW_STATIC "static"
+%token KW_STATIC_ASSERT "static_assert"
+%token KW_STATIC_CAST "static_cast"
+%token KW_STRUCT "struct"
+%token KW_TEMPLATE "template"
+%token KW_THIS "this"
+%token KW_THREAD_LOCAL "thread_local"
+%token KW_THROW "throw"
+%token KW_TRUE "true"
+%token KW_TRY "try"
+%token KW_TYPEDEF "typedef"
+%token KW_TYPEID "typeid"
+%token KW_TYPENAME "typename"
+%token KW_UNDERLYING_TYPE "__underlying_type"
+%token KW_UNION "union"
+%token KW_UNSIGNED "unsigned"
+%token KW_USING "using"
+%token KW_VIRTUAL "virtual"
+%token KW_VOID "void"
+%token KW_VOLATILE "volatile"
+%token KW_WCHAR_T "wchar_t"
+%token KW_WHILE "while"
 
 /* These special tokens are used to set the starting state of the
    parser.  The lexer places the appropriate one of these on the head

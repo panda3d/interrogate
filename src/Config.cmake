@@ -224,7 +224,7 @@ set(_PREV_WANT_PYTHON_VERSION "${WANT_PYTHON_VERSION}" CACHE INTERNAL "Internal.
 # need to have these programs if you need to make changes to the
 # bison or flex sources (see the next point, below).
 
-find_package(BISON QUIET)
+find_package(BISON 3.0 QUIET)
 find_package(FLEX QUIET)
 
 # You may not even have bison and flex installed.  If you don't, no
