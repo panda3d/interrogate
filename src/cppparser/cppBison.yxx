@@ -375,7 +375,6 @@ pop_struct() {
 %type <attr_list> attribute_specifiers
 %type <attr_list> attribute_specifier
 %type <u.integer> storage_class
-%type <u.instance> constructor_or_deduction_guide
 %type <u.instance> constructor_prototype
 %type <u.instance> function_prototype
 %type <u.integer> function_post
@@ -1161,7 +1160,7 @@ type_like_declaration:
 
   current_scope->add_declaration($2, global_scope, current_lexer, @2);
 }
-        | storage_class constructor_or_deduction_guide
+        | storage_class constructor_prototype
 {
   if ($2 != nullptr) {
     $2->_storage_class |= (current_storage_class | $1);
@@ -1181,34 +1180,6 @@ type_like_declaration:
         /* We don't need to include a rule for variables that point to
            functions, because we get those from the function_prototype
            definition. */
-        ;
-
-constructor_or_deduction_guide:
-        constructor_prototype
-{
-  if ($1 != nullptr) {
-    // Push the scope so that the initializers can make use of things defined
-    // in the class body.
-    push_scope($1->get_scope(current_scope, global_scope));
-  }
-}
-        maybe_initialize_or_constructor_body
-{
-  if ($1 != nullptr) {
-    pop_scope();
-    $1->set_initializer($3);
-  }
-}
-        | deduction_guide
-{
-  // Deduction guides look a lot like constructors at first, so they are
-  // handled here, but we don't do anything with them.
-  $$ = nullptr;
-}
-        ;
-
-deduction_guide:
-        constructor_prototype POINTSAT TYPENAME_IDENTIFIER ';'
         ;
 
 multiple_instance_identifiers:
@@ -1313,32 +1284,42 @@ constructor_prototype:
   // Define the parameters in the function's scope before we parse the suffix.
   current_scope->add_function_parameters($4, global_scope, current_lexer);
 }
-        ')' function_post optional_attributes optional_requires_clause
+        ')' function_post optional_attributes optional_requires_clause maybe_trailing_return_type maybe_initialize_or_constructor_body
 {
-  CPPScope *scope = $1->get_scope(current_scope, global_scope);
-  CPPType *type;
-  std::string simple_name = $1->get_simple_name();
-  if (!simple_name.empty() && simple_name[0] == '~') {
-    // A destructor has no return type.
-    type = new CPPSimpleType(CPPSimpleType::T_void);
-  }
-  else if (scope != nullptr && simple_name == scope->get_simple_name()) {
-    // Neither does a constructor.
-    type = new CPPSimpleType(CPPSimpleType::T_void);
-  }
-  else {
-    // This isn't a constructor, so it has an implicit return type of
-    // int.
-    yywarning("function has no return type, assuming int", @1);
-    type = new CPPSimpleType(CPPSimpleType::T_int);
-  }
-  pop_scope();
+  if ($10 == nullptr) {
+    CPPScope *scope = $1->get_scope(current_scope, global_scope);
+    CPPType *type;
+    std::string simple_name = $1->get_simple_name();
+    if (!simple_name.empty() && simple_name[0] == '~') {
+      // A destructor has no return type.
+      type = new CPPSimpleType(CPPSimpleType::T_void);
+    }
+    else if (scope != nullptr && simple_name == scope->get_simple_name()) {
+      // Neither does a constructor.
+      type = new CPPSimpleType(CPPSimpleType::T_void);
+    }
+    else {
+      // This isn't a constructor, so it has an implicit return type of
+      // int.
+      yywarning("function has no return type, assuming int", @1);
+      type = new CPPSimpleType(CPPSimpleType::T_int);
+    }
+    pop_scope();
 
-  CPPInstanceIdentifier *ii = new CPPInstanceIdentifier($1);
-  ii->add_func_modifier($4, $7, nullptr, $8);
-  ii->add_attributes(current_attributes);
+    CPPInstanceIdentifier *ii = new CPPInstanceIdentifier($1);
+    ii->add_func_modifier($4, $7, nullptr, $8);
+    ii->add_attributes(current_attributes);
 
-  $$ = new CPPInstance(type, ii, 0, @1.file);
+    $$ = new CPPInstance(type, ii, 0, @1.file);
+
+    if ($11 != nullptr) {
+      $$->set_initializer($11);
+    }
+  } else {
+    // This is actually a deduction guide, which we ignore for now.
+    pop_scope();
+    $$ = nullptr;
+  }
 }
 /* This is a hack to support functions with the identifier enveloped by a
    pair of parentheses. */
@@ -1360,7 +1341,7 @@ constructor_prototype:
   // Define the parameters in the function's scope before we parse the suffix.
   current_scope->add_function_parameters($7, global_scope, current_lexer);
 }
-        ')' function_post optional_attributes optional_requires_clause
+        ')' function_post optional_attributes optional_requires_clause maybe_initialize_or_constructor_body
 {
   pop_scope();
   CPPType *type = $1->find_type(current_scope, global_scope, false, current_lexer);
@@ -1374,6 +1355,9 @@ constructor_prototype:
   ii->add_attributes(current_attributes);
 
   $$ = new CPPInstance(type, ii, 0, @1.file);
+  if ($13 != nullptr) {
+    $$->set_initializer($13);
+  }
 }
         | TYPENAME_IDENTIFIER '('
 {
@@ -1393,25 +1377,34 @@ constructor_prototype:
   // Define the parameters in the function's scope before we parse the suffix.
   current_scope->add_function_parameters($4, global_scope, current_lexer);
 }
-        ')' function_post optional_attributes optional_requires_clause
+        ')' function_post optional_attributes optional_requires_clause maybe_trailing_return_type maybe_initialize_or_constructor_body
 {
   pop_scope();
 
-  CPPType *type;
-  if ($1->get_simple_name() == current_scope->get_simple_name()) {
-    // This is a constructor, and has no return.
-    type = new CPPSimpleType(CPPSimpleType::T_void);
+  // Ignore deduction guides.
+  if ($10 == nullptr) {
+    CPPType *type;
+    if ($1->get_simple_name() == current_scope->get_simple_name()) {
+      // This is a constructor, and has no return.
+      type = new CPPSimpleType(CPPSimpleType::T_void);
+    } else {
+      // This isn't a constructor, so it has an implicit return type of
+      // int.
+      type = new CPPSimpleType(CPPSimpleType::T_int);
+    }
+
+    CPPInstanceIdentifier *ii = new CPPInstanceIdentifier($1);
+    ii->add_func_modifier($4, $7, nullptr, $8);
+    ii->add_attributes(current_attributes);
+
+    $$ = new CPPInstance(type, ii, 0, @1.file);
+
+    if ($11 != nullptr) {
+      $$->set_initializer($11);
+    }
   } else {
-    // This isn't a constructor, so it has an implicit return type of
-    // int.
-    type = new CPPSimpleType(CPPSimpleType::T_int);
+    $$ = nullptr;
   }
-
-  CPPInstanceIdentifier *ii = new CPPInstanceIdentifier($1);
-  ii->add_func_modifier($4, $7, nullptr, $8);
-  ii->add_attributes(current_attributes);
-
-  $$ = new CPPInstance(type, ii, 0, @1.file);
 }
         ;
 
@@ -2772,7 +2765,7 @@ type:
     $$ = et;
   }
 }
-        | KW_DECLTYPE '(' const_expr ')'
+        | KW_DECLTYPE '(' const_expr_comma ')'
 {
   $$ = $3->determine_type();
   if ($$ == nullptr) {
@@ -2895,7 +2888,7 @@ type_decl:
     $$ = et;
   }
 }
-        | KW_DECLTYPE '(' const_expr ')'
+        | KW_DECLTYPE '(' const_expr_comma ')'
 {
   $$ = $3->determine_type();
   if ($$ == nullptr) {
@@ -2977,7 +2970,7 @@ predefined_type:
     $$ = et;
   }
 }
-        | KW_DECLTYPE '(' const_expr ')'
+        | KW_DECLTYPE '(' const_expr_comma ')'
 {
   $$ = $3->determine_type();
   if ($$ == nullptr) {
@@ -3289,16 +3282,14 @@ namespace_declaration:
 }
         | KW_INLINE KW_NAMESPACE name '{'
 {
-  CPPScope *scope = $3->find_scope(current_scope, global_scope, current_lexer);
-  if (scope == nullptr) {
-    // This must be a new namespace declaration.
-    CPPScope *parent_scope =
-      $3->get_scope(current_scope, global_scope, current_lexer);
-    if (parent_scope == nullptr) {
-      parent_scope = current_scope;
-    }
-    scope = new CPPScope(parent_scope, $3->_names.back(), V_public);
+  // Always create a new scope for the inline namespace, since we add the
+  // equivalent of `using namespace` to the parent.
+  CPPScope *parent_scope =
+    $3->get_scope(current_scope, global_scope, current_lexer);
+  if (parent_scope == nullptr) {
+    parent_scope = current_scope;
   }
+  CPPScope *scope = new CPPScope(parent_scope, $3->_names.back(), V_public);
 
   CPPNamespace *nspace = new CPPNamespace($3, scope, @2.file);
   nspace->_is_inline = true;
