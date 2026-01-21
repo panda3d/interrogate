@@ -1351,11 +1351,6 @@ scan_element(CPPInstance *element, CPPStructType *struct_type,
     return 0;
   }
 
-  if ((element->_storage_class & CPPInstance::SC_static) != 0) {
-    // The element is static, so can't be exported.
-    return 0;
-  }
-
   // Make sure the element knows what its scope is.
   if (element->_ident->_native_scope != scope) {
     element = new CPPInstance(*element);

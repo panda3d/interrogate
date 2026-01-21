@@ -1,0 +1,110 @@
+version: 3.3
+
+index:
+ - wrapper for Type::Type
+ - wrapper for Type::Type
+ - function Type::get_global_const
+ - function Type::get_global_ptr
+ - function Type::set_global_ptr
+ - function Type::Type
+ - function Type::~Type
+ - type Type
+ - type int
+ - type Type *
+ - type Type const *
+ - type Type const
+ - element Type::global_const
+ - element Type::global_ptr
+
+type "Type" {
+  flags: global class fully_defined implicit_destructor
+
+  constructor: Type
+  destructor: ~Type
+  element: global_const
+  element: global_ptr
+}
+
+type "Type *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Type
+}
+
+type "Type const" {
+  flags: wrapped const fully_defined
+  wrapped_type: Type
+}
+
+type "Type const *" {
+  flags: wrapped pointer fully_defined
+  wrapped_type: Type const
+}
+
+function "Type::Type" {
+  flags: method constructor
+  prototype:
+    inline Type::Type(void) = default;
+    inline Type::Type(Type const &) = default;
+
+  python wrapper {
+    flags: caller_manages has_return
+    return_type: Type *
+  }
+  python wrapper {
+    flags: caller_manages has_return copy_constructor
+    return_type: Type *
+
+    parameter: Type const *
+  }
+}
+
+function "Type::get_global_const" {
+  flags: method getter
+  expression: "Type::global_const"
+  prototype:
+    static int Type::get_global_const(void);
+  comment:
+    getter for static int const Type::global_const;
+}
+
+function "Type::get_global_ptr" {
+  flags: method getter
+  expression: "Type::global_ptr"
+  prototype:
+    static Type *Type::get_global_ptr(void);
+  comment:
+    getter for static Type *Type::global_ptr;
+}
+
+element "Type::global_const" {
+  type: int
+  flags: has_getter
+  getter: Type::get_global_const
+}
+
+element "Type::global_ptr" {
+  type: Type *
+  flags: has_getter has_setter
+  getter: Type::get_global_ptr
+  setter: Type::set_global_ptr
+}
+
+function "Type::set_global_ptr" {
+  flags: method setter
+  expression: "Type::global_ptr"
+  prototype:
+    static void Type::set_global_ptr(Type *value);
+  comment:
+    setter for static Type *Type::global_ptr;
+}
+
+function "Type::~Type" {
+  flags: method destructor
+  prototype:
+    Type::~Type(void);
+}
+
+type "int" {
+  flags: atomic fully_defined
+  atomic_token: int
+}

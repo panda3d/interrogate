@@ -22,3 +22,4 @@ endfunction()
 
 idb_test(item_assignment.h)
 idb_test(nested_struct.h)
+idb_test(static_class_member.h)
