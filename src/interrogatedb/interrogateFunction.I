@@ -55,6 +55,22 @@ is_operator_typecast() const {
 }
 
 /**
+ * Returns true if the function is a generated getter function.
+ */
+INLINE bool InterrogateFunction::
+is_getter() const {
+  return (_flags & F_getter) != 0;
+}
+
+/**
+ * Returns true if the function is a generated setter function.
+ */
+INLINE bool InterrogateFunction::
+is_setter() const {
+  return (_flags & F_setter) != 0;
+}
+
+/**
  * Returns true if the function is a constructor.
  */
 INLINE bool InterrogateFunction::

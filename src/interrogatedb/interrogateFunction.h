@@ -38,6 +38,8 @@ public:
   INLINE bool is_method() const;
   INLINE bool is_unary_op() const;
   INLINE bool is_operator_typecast() const;
+  INLINE bool is_getter() const;
+  INLINE bool is_setter() const;
   INLINE bool is_constructor() const;
   INLINE bool is_destructor() const;
   INLINE TypeIndex get_class() const;

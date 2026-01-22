@@ -3677,6 +3677,8 @@ write_module_class(ostream &out, Object *obj) {
   out << "    Dtool_" << ClassName << "._PyType.tp_dict = dict;\n";
   out << "    PyDict_SetItemString(dict, \"DtoolClassDict\", dict);\n";
 
+  std::vector<std::pair<std::string, std::string> > static_const_elements;
+
   // Also add the static properties, which can't be added via getset.
   for (Property *property : obj->_properties) {
     const InterrogateElement &ielem = property->_ielement;
@@ -3701,13 +3703,28 @@ write_module_class(ostream &out, Object *obj) {
     string name1 = methodNameFromCppName(ielem.get_name(), "", false);
     // string name2 = methodNameFromCppName(ielem.get_name(), "", true);
 
-    string getter = "&Dtool_" + ClassName + "_" + ielem.get_name() + "_Getter";
-    string setter = "nullptr";
+    string getter = "Dtool_" + ClassName + "_" + ielem.get_name() + "_Getter";
+    string setter_p = "nullptr";
     if (!ielem.is_sequence() && !ielem.is_mapping() && !property->_setter_remaps.empty()) {
-      setter = "&Dtool_" + ClassName + "_" + ielem.get_name() + "_Setter";
+      setter_p = "&Dtool_" + ClassName + "_" + ielem.get_name() + "_Setter";
     }
 
-    out << "    static const PyGetSetDef def_" << name1 << " = {(char *)\"" << name1 << "\", " << getter << ", " << setter;
+    if (!property->_has_this && !ielem.is_sequence() && !ielem.is_mapping() &&
+        !ielem.has_setter() && ielem.get_type() != 0 && ielem.get_getter() != 0) {
+      // Avoid creating a static property if this is just a static constant,
+      // in which case we can create the wrapper now.
+      const InterrogateFunction &ifunc = idb->get_function(ielem.get_getter());
+      if (ifunc.is_getter()) {
+        // Yes, this is a generated getter, not a MAKE_PROPERTY or something.
+        // So it's safe to call it without side effects, but we have to do
+        // it after the type is initialized, since it may be an instance of
+        // the type itself.
+        static_const_elements.push_back({name1, getter});
+        continue;
+      }
+    }
+
+    out << "    static const PyGetSetDef def_" << name1 << " = {(char *)\"" << name1 << "\", &" << getter << ", " << setter_p;
 
     if (ielem.has_comment()) {
       out << ", (char *)\n";
@@ -3866,6 +3883,14 @@ write_module_class(ostream &out, Object *obj) {
         }
       }
     }
+  }
+
+  for (auto &pair : static_const_elements) {
+    out << "    {\n";
+    out << "      PyObject *value = " << pair.second << "(nullptr, nullptr);\n";
+    out << "      PyDict_SetItemString(dict, \"" << pair.first << "\", value);\n";
+    out << "      Py_DECREF(value);\n";
+    out << "    }\n";
   }
 
   if (wrote_enum_prep_code) {
