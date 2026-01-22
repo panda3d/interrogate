@@ -3877,10 +3877,14 @@ write_module_class(ostream &out, Object *obj) {
           name2 = name1;
         }
         string enum_value = obj->_itype.get_scoped_name() + "::" + (*ei)->get_simple_name();
-        out << "    PyDict_SetItemString(dict, \"" << name1 << "\", Dtool_WrapValue(" << enum_value << "));\n";
+        out << "    {\n";
+        out << "      PyObject *value = Dtool_WrapValue(" << enum_value << ");\n";
+        out << "      PyDict_SetItemString(dict, \"" << name1 << "\", value);\n";
         if (name1 != name2) {
-          out << "    PyDict_SetItemString(dict, \"" << name2 << "\", Dtool_WrapValue(" << enum_value << "));\n";
+          out << "      PyDict_SetItemString(dict, \"" << name2 << "\", value);\n";
         }
+        out << "      Py_DECREF(value);\n";
+        out << "    }\n";
       }
     }
   }
