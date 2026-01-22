@@ -97,6 +97,20 @@ CPPInstance(CPPType *type, CPPInstanceIdentifier *ii, int storage_class,
   }
 
   delete ii;
+
+  if (storage_class & SC_constexpr) {
+    // Need to make sure that the type is const if it's a constexpr variable.
+    // Does not apply to functions (as of C++14) or refs (which can't be const)
+    switch (_type->get_subtype()) {
+    case ST_const:
+    case ST_reference:
+    case ST_function:
+      break;
+
+    default:
+      _type = CPPType::new_type(new CPPConstType(_type));
+    }
+  }
 }
 
 /**
