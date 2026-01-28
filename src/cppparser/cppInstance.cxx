@@ -136,6 +136,44 @@ CPPInstance::
   // Can't delete the identifier.  Don't try.
 }
 
+/**
+ * Returns the type of this instance, with "auto" resolved, if possible.
+ */
+CPPType *CPPInstance::
+get_type() const {
+  CPPType *type = _type;
+  if (_initializer == nullptr) {
+    return type;
+  }
+
+  CPPReferenceType *ref_type = type->as_reference_type();
+  if (ref_type != nullptr) {
+    type = ref_type->_pointing_at;
+  }
+  CPPConstType *const_type = type->as_const_type();
+  if (const_type != nullptr) {
+    type = const_type->_wrapped_around;
+  }
+
+  // Are we left with just "auto"?
+  CPPSimpleType *simple_type = type->as_simple_type();
+  if (simple_type != nullptr && simple_type->_type == CPPSimpleType::T_auto) {
+    type = _initializer->determine_type();
+    if (type != nullptr) {
+      // Reapply const if necessary
+      type = type->remove_reference()->remove_const();
+      if (const_type != nullptr) {
+        type = CPPType::new_type(new CPPConstType(type));
+      }
+      if (ref_type != nullptr) {
+        type = CPPType::new_type(new CPPReferenceType(type, ref_type->_value_category));
+      }
+      return type;
+    }
+  }
+
+  return _type;
+}
 
 /**
  * Constructs and returns a new CPPInstance object that corresponds to a

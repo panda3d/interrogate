@@ -86,6 +86,8 @@ public:
   CPPInstance(const CPPInstance &copy);
   ~CPPInstance();
 
+  CPPType *get_type() const;
+
   static CPPInstance *
   make_typecast_function(CPPInstance *inst, CPPIdentifier *ident,
                          CPPParameterList *parameters, int function_flags);
