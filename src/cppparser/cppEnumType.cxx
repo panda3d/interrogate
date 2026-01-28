@@ -271,6 +271,17 @@ substitute_decl(CPPDeclaration::SubstDecl &subst,
 }
 
 /**
+ * Returns the result of sizeof(type), or 0 if it could not be determined.
+ */
+size_t CPPEnumType::
+get_sizeof() const {
+  if (_element_type != nullptr) {
+    return _element_type->get_sizeof();
+  }
+  return 0;
+}
+
+/**
  *
  */
 void CPPEnumType::

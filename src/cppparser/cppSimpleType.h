@@ -84,6 +84,8 @@ public:
   virtual bool is_destructible() const;
   virtual bool is_parameter_expr() const;
 
+  virtual size_t get_sizeof() const;
+
   virtual std::string get_preferred_name() const;
 
   virtual void output(std::ostream &out, int indent_level, CPPScope *scope,

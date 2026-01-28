@@ -46,6 +46,8 @@ public:
   virtual bool is_copy_assignable() const;
   virtual bool is_equivalent(const CPPType &other) const;
 
+  virtual size_t get_sizeof() const;
+
   virtual void output(std::ostream &out, int indent_level, CPPScope *scope,
                       bool complete) const;
   virtual void output_instance(std::ostream &out, int indent_level,

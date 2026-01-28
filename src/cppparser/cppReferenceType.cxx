@@ -215,6 +215,17 @@ is_equivalent(const CPPType &other) const {
 }
 
 /**
+ * Returns the result of sizeof(type), or 0 if it could not be determined.
+ */
+size_t CPPReferenceType::
+get_sizeof() const {
+  if (_pointing_at != nullptr) {
+    return _pointing_at->get_sizeof();
+  }
+  return 0;
+}
+
+/**
  *
  */
 void CPPReferenceType::

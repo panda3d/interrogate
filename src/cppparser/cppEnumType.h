@@ -52,6 +52,8 @@ public:
                                           CPPScope *current_scope,
                                           CPPScope *global_scope);
 
+  virtual size_t get_sizeof() const;
+
   virtual void output(std::ostream &out, int indent_level, CPPScope *scope,
                       bool complete) const;
   virtual SubType get_subtype() const;

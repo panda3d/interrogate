@@ -384,6 +384,17 @@ is_equivalent(const CPPType &other) const {
 }
 
 /**
+ * Returns the result of sizeof(type), or 0 if it could not be determined.
+ */
+size_t CPPTypedefType::
+get_sizeof() const {
+  if (_type != nullptr) {
+    return _type->get_sizeof();
+  }
+  return 0;
+}
+
+/**
  *
  */
 void CPPTypedefType::

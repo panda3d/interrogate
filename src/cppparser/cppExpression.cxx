@@ -32,6 +32,7 @@
 #include "pdtoa.h"
 
 #include <assert.h>
+#include <limits.h>
 
 using std::cerr;
 using std::string;
@@ -653,8 +654,29 @@ evaluate() const {
   case T_empty_aggregate_init:
   case T_new:
   case T_default_new:
+    return Result();
+
   case T_sizeof_type:
+    {
+      size_t size = _u._typecast._to->get_sizeof();
+      if (size != 0 && size <= (size_t)INT_MAX) {
+        return Result((int)size);
+      }
+    }
+    return Result();
+
   case T_sizeof_expr:
+    {
+      CPPType *type = _u._typecast._op1->determine_type();
+      if (type != nullptr) {
+        size_t size = type->get_sizeof();
+        if (size != 0 && size <= (size_t)INT_MAX) {
+          return Result((int)size);
+        }
+      }
+    }
+    return Result();
+
   case T_sizeof_ellipsis:
     return Result();
 
@@ -1070,7 +1092,7 @@ determine_type() const {
     return char32_str_type;
 
   case T_variable:
-    return _u._variable->_type;
+    return _u._variable->get_type();
 
   case T_function:
     if (_u._fgroup->get_return_type() == nullptr) {

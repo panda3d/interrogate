@@ -82,6 +82,8 @@ public:
   virtual bool is_convertible_to(const CPPType *other) const;
   virtual bool is_equivalent(const CPPType &other) const;
 
+  virtual size_t get_sizeof() const;
+
   void output_instance(std::ostream &out, const std::string &name,
                        CPPScope *scope) const;
   virtual void output_instance(std::ostream &out, int indent_level,

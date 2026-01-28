@@ -135,6 +135,20 @@ is_equivalent(const CPPType &other) const {
 }
 
 /**
+ * Returns the result of sizeof(type), or 0 if it could not be determined.
+ */
+size_t CPPArrayType::
+get_sizeof() const {
+  if (_element_type != nullptr && _bounds != nullptr) {
+    CPPExpression::Result result = _bounds->evaluate();
+    if (result._type == CPPExpression::RT_integer) {
+      return _element_type->get_sizeof() * result._u._integer;
+    }
+  }
+  return 0;
+}
+
+/**
  *
  */
 CPPDeclaration *CPPArrayType::

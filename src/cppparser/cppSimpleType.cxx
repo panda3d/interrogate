@@ -141,6 +141,28 @@ is_parameter_expr() const {
 }
 
 /**
+ * Returns the result of sizeof(type), or 0 if it could not be determined.
+ */
+size_t CPPSimpleType::
+get_sizeof() const {
+  switch (_type) {
+  case T_char:
+  case T_char8_t:
+    return 1;
+
+  case T_char16_t:
+    return 2;
+
+  case T_char32_t:
+    return 4;
+
+  default:
+    break;
+  }
+  return 0;
+}
+
+/**
  *
  */
 std::string CPPSimpleType::

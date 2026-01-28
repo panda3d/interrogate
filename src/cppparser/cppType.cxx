@@ -424,6 +424,14 @@ is_convertible_to(const CPPType *other) const {
 }
 
 /**
+ * Returns the result of sizeof(type), or 0 if it could not be determined.
+ */
+size_t CPPType::
+get_sizeof() const {
+  return 0;
+}
+
+/**
  * Formats a C++-looking line that defines an instance of the given type, with
  * the indicated name.  In most cases this will be "type name", but some types
  * have special exceptions.
