@@ -69,3 +69,26 @@
 #error Should not reach
 #endif
 
+#if defined FALSE
+#error Should not reach
+#endif
+
+#if defined( FALSE )
+#error Should not reach
+#endif
+
+#if defined(FALSE)
+#error Should not reach
+#endif
+
+#if !defined TRUE
+#error Should not reach
+#endif
+
+#if !defined( TRUE )
+#error Should not reach
+#endif
+
+#if !defined(TRUE)
+#error Should not reach
+#endif

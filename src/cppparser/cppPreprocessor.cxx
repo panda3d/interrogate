@@ -2658,6 +2658,11 @@ expand_defined_function(string &expr, size_t q, size_t &p) const {
     p++;
   }
 
+  // Skip space after the opening (
+  while (p < expr.size() && isspace(expr[p])) {
+    p++;
+  }
+
   size_t r = p;
   while (p < expr.size() && (isalnum(expr[p]) || expr[p] == '_')) {
     p++;
@@ -2665,6 +2670,10 @@ expand_defined_function(string &expr, size_t q, size_t &p) const {
   string name = expr.substr(r, p - r);
 
   if (has_paren) {
+    while (p < expr.size() && isspace(expr[p])) {
+      p++;
+    }
+
     if (expr[p] == ')') {
       p++;
     } else {
