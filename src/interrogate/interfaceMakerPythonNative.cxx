@@ -5095,7 +5095,7 @@ write_function_forset(ostream &out,
 
       if (caught_all) {
         indent(out, indent_level)
-          << "  // [DCE] -2 \n";
+          << "// [DCE] -2 ";
         remap->write_orig_prototype(out, 0, false, (max_num_args - min_num_args));
         out << "\n";
         continue;
