@@ -276,3 +276,26 @@ ALWAYS_INLINE PyObject *Dtool_WrapValue(const std::pair<T1, T2> &value) {
   PyTuple_SET_ITEM(tuple, 1, Dtool_WrapValue(value.second));
   return tuple;
 }
+
+#if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+ALWAYS_INLINE PyObject *Dtool_WrapValue(std::string_view value) {
+#if PY_MAJOR_VERSION >= 3
+  return PyUnicode_FromStringAndSize(value.data(), (Py_ssize_t)value.length());
+#else
+  return PyString_FromStringAndSize(value.data(), (Py_ssize_t)value.length());
+#endif
+}
+
+ALWAYS_INLINE PyObject *Dtool_WrapValue(std::wstring_view value) {
+  return PyUnicode_FromWideChar(value.data(), (Py_ssize_t)value.length());
+}
+
+template<class T>
+ALWAYS_INLINE PyObject *Dtool_WrapValue(const std::optional<T> &value) {
+  if (value.has_value()) {
+    return Dtool_WrapValue(*value);
+  } else {
+    return Py_NewRef(Py_None);
+  }
+}
+#endif

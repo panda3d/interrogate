@@ -10,6 +10,14 @@
 #include <string>
 #include <vector>
 
+// std::string_view and std::optional are C++17, so guard their use to keep
+// this header usable in C++11 builds.  MSVC requires _MSVC_LANG since it
+// doesn't update __cplusplus without /Zc:__cplusplus.
+#if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+#include <optional>
+#include <string_view>
+#endif
+
 #include "pnotify.h"
 #include "register_type.h"
 
@@ -187,6 +195,13 @@ ALWAYS_INLINE PyObject *Dtool_WrapValue(Py_buffer *value);
 
 template<class T1, class T2>
 ALWAYS_INLINE PyObject *Dtool_WrapValue(const std::pair<T1, T2> &value);
+
+#if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+ALWAYS_INLINE PyObject *Dtool_WrapValue(std::string_view value);
+ALWAYS_INLINE PyObject *Dtool_WrapValue(std::wstring_view value);
+template<class T>
+ALWAYS_INLINE PyObject *Dtool_WrapValue(const std::optional<T> &value);
+#endif
 
 EXPCL_PYPANDA Dtool_PyTypedObject *Dtool_GetSuperBase();
 
