@@ -5528,8 +5528,7 @@ write_function_instance(ostream &out, FunctionRemap *remap,
 
       } else if (TypeManager::is_wstring(orig_type) ||
                  TypeManager::is_wstring_view(orig_type) ||
-                 TypeManager::is_const_ptr_to_basic_string_wchar(orig_type) ||
-                 TypeManager::is_const_ptr_to_basic_string_view_wchar(orig_type)) {
+                 TypeManager::is_const_ptr_to_basic_string_wchar(orig_type)) {
         out << "#if PY_VERSION_HEX >= 0x03020000\n";
         indent(out, indent_level) << "PyObject *" << param_name << null_assign << ";\n";
         out << "#else\n";
@@ -5543,8 +5542,7 @@ write_function_instance(ostream &out, FunctionRemap *remap,
             << "Py_ssize_t " << param_name << "_len;\n"
             << "wchar_t *" << param_name << "_str = nullptr;\n";
 
-          if (TypeManager::is_wstring_view(orig_type) ||
-              TypeManager::is_const_ptr_to_basic_string_view_wchar(orig_type)) {
+          if (TypeManager::is_wstring_view(orig_type)) {
             extra_convert << "std::wstring_view " << param_name << "_wstr;\n";
           } else {
             extra_convert << "std::wstring " << param_name << "_wstr;\n";
@@ -5561,8 +5559,7 @@ write_function_instance(ostream &out, FunctionRemap *remap,
             << "PyUnicode_AsWideChar(" << param_name << ", " << param_name << "_str, " << param_name << "_len);\n"
             << "#endif\n";
 
-          if (TypeManager::is_wstring_view(orig_type) ||
-              TypeManager::is_const_ptr_to_basic_string_view_wchar(orig_type)) {
+          if (TypeManager::is_wstring_view(orig_type)) {
             extra_convert << "  " << param_name << "_wstr = std::wstring_view(" << param_name << "_str, " << param_name << "_len);\n";
           } else {
             extra_convert << "  " << param_name << "_wstr.assign(" << param_name << "_str, " << param_name << "_len);\n";

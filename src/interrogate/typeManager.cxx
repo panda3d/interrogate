@@ -896,42 +896,6 @@ is_const_basic_string_view_char(CPPType *type) {
 }
 
 /**
- * Returns true if the indicated type is a const reference to
- * basic_string_view<char>.
- */
-bool TypeManager::
-is_const_ref_to_basic_string_view_char(CPPType *type) {
-  switch (type->get_subtype()) {
-  case CPPDeclaration::ST_reference:
-    return is_const_basic_string_view_char(type->as_reference_type()->_pointing_at);
-
-  case CPPDeclaration::ST_typedef:
-    return is_const_ref_to_basic_string_view_char(type->as_typedef_type()->_type);
-
-  default:
-    return false;
-  }
-}
-
-/**
- * Returns true if the indicated type is a const pointer to
- * basic_string_view<char>.
- */
-bool TypeManager::
-is_const_ptr_to_basic_string_view_char(CPPType *type) {
-  switch (type->get_subtype()) {
-  case CPPDeclaration::ST_pointer:
-    return is_const_basic_string_view_char(type->as_pointer_type()->_pointing_at);
-
-  case CPPDeclaration::ST_typedef:
-    return is_const_ptr_to_basic_string_view_char(type->as_typedef_type()->_type);
-
-  default:
-    return false;
-  }
-}
-
-/**
  * Returns true if the type is basic_string_view<char>, or a const reference to
  * it.
  */
@@ -1138,42 +1102,6 @@ is_const_basic_string_view_wchar(CPPType *type) {
 
   case CPPDeclaration::ST_typedef:
     return is_const_basic_string_view_wchar(type->as_typedef_type()->_type);
-
-  default:
-    return false;
-  }
-}
-
-/**
- * Returns true if the indicated type is a const reference to
- * basic_string_view<wchar_t>.
- */
-bool TypeManager::
-is_const_ref_to_basic_string_view_wchar(CPPType *type) {
-  switch (type->get_subtype()) {
-  case CPPDeclaration::ST_reference:
-    return is_const_basic_string_view_wchar(type->as_reference_type()->_pointing_at);
-
-  case CPPDeclaration::ST_typedef:
-    return is_const_ref_to_basic_string_view_wchar(type->as_typedef_type()->_type);
-
-  default:
-    return false;
-  }
-}
-
-/**
- * Returns true if the indicated type is a const pointer to
- * basic_string_view<wchar_t>.
- */
-bool TypeManager::
-is_const_ptr_to_basic_string_view_wchar(CPPType *type) {
-  switch (type->get_subtype()) {
-  case CPPDeclaration::ST_pointer:
-    return is_const_basic_string_view_wchar(type->as_pointer_type()->_pointing_at);
-
-  case CPPDeclaration::ST_typedef:
-    return is_const_ptr_to_basic_string_view_wchar(type->as_typedef_type()->_type);
 
   default:
     return false;
