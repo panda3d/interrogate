@@ -13,6 +13,7 @@ set(INTERROGATE_HEADERS
   parameterRemapBasicStringPtrToString.h
   parameterRemapBasicStringRefToString.h
   parameterRemapBasicStringToString.h
+  parameterRemapBasicStringViewToStringView.h
   parameterRemapCharStarToString.h
   parameterRemapConcreteToPointer.h
   parameterRemapConstToNonConst.h parameterRemapEnumToInt.h
@@ -39,6 +40,7 @@ set(INTERROGATE_SOURCES
   parameterRemapBasicStringPtrToString.cxx
   parameterRemapBasicStringRefToString.cxx
   parameterRemapBasicStringToString.cxx
+  parameterRemapBasicStringViewToStringView.cxx
   parameterRemapCharStarToString.cxx
   parameterRemapConcreteToPointer.cxx
   parameterRemapConstToNonConst.cxx

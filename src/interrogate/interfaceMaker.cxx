@@ -28,6 +28,7 @@
 #include "parameterRemapBasicStringToString.h"
 #include "parameterRemapBasicStringRefToString.h"
 #include "parameterRemapBasicStringPtrToString.h"
+#include "parameterRemapBasicStringViewToStringView.h"
 #include "parameterRemapPTToPointer.h"
 
 #include "interrogateDatabase.h"
@@ -355,6 +356,12 @@ remap_parameter(CPPType *struct_type, CPPType *param_type) {
 
       } else if (TypeManager::is_const_ptr_to_basic_string_wchar(param_type)) {
         return new ParameterRemapBasicWStringPtrToWString(param_type);
+
+      } else if (TypeManager::is_basic_string_view_char(param_type)) {
+        return new ParameterRemapBasicStringViewToStringView(param_type);
+
+      } else if (TypeManager::is_basic_string_view_wchar(param_type)) {
+        return new ParameterRemapBasicWStringViewToWStringView(param_type);
 
       } else if (TypeManager::is_reference(param_type) ||
                  TypeManager::is_pointer(param_type)) {

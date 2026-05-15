@@ -852,6 +852,106 @@ is_string(CPPType *type) {
 }
 
 /**
+ * Returns true if the type is basic_string_view<char>.  This is the standard
+ * C++ string_view class.
+ */
+bool TypeManager::
+is_basic_string_view_char(CPPType *type) {
+  CPPType *string_view_type = get_basic_string_view_char_type();
+  if (string_view_type != nullptr &&
+      string_view_type->get_local_name(&parser) == type->get_local_name(&parser)) {
+    return true;
+  }
+
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_const:
+    return is_basic_string_view_char(type->as_const_type()->_wrapped_around);
+
+  case CPPDeclaration::ST_typedef:
+    return is_basic_string_view_char(type->as_typedef_type()->_type);
+
+  default:
+    break;
+  }
+
+  return false;
+}
+
+/**
+ * Returns true if the indicated type is a const wrapper around
+ * basic_string_view<char>.
+ */
+bool TypeManager::
+is_const_basic_string_view_char(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_const:
+    return is_basic_string_view_char(type->as_const_type()->_wrapped_around);
+
+  case CPPDeclaration::ST_typedef:
+    return is_const_basic_string_view_char(type->as_typedef_type()->_type);
+
+  default:
+    return false;
+  }
+}
+
+/**
+ * Returns true if the indicated type is a const reference to
+ * basic_string_view<char>.
+ */
+bool TypeManager::
+is_const_ref_to_basic_string_view_char(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_reference:
+    return is_const_basic_string_view_char(type->as_reference_type()->_pointing_at);
+
+  case CPPDeclaration::ST_typedef:
+    return is_const_ref_to_basic_string_view_char(type->as_typedef_type()->_type);
+
+  default:
+    return false;
+  }
+}
+
+/**
+ * Returns true if the indicated type is a const pointer to
+ * basic_string_view<char>.
+ */
+bool TypeManager::
+is_const_ptr_to_basic_string_view_char(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_pointer:
+    return is_const_basic_string_view_char(type->as_pointer_type()->_pointing_at);
+
+  case CPPDeclaration::ST_typedef:
+    return is_const_ptr_to_basic_string_view_char(type->as_typedef_type()->_type);
+
+  default:
+    return false;
+  }
+}
+
+/**
+ * Returns true if the type is basic_string_view<char>, or a const reference to
+ * it.
+ */
+bool TypeManager::
+is_string_view(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_reference:
+    return is_const_basic_string_view_char(type->as_reference_type()->_pointing_at);
+
+  case CPPDeclaration::ST_typedef:
+    return is_string_view(type->as_typedef_type()->_type);
+
+  default:
+    break;
+  }
+
+  return is_basic_string_view_char(type);
+}
+
+/**
  * Returns true if the indicated type is wchar_t or const wchar_t.  We don't
  * mind signed or unsigned wchar_t.
  */
@@ -998,6 +1098,106 @@ is_wstring(CPPType *type) {
   }
 
   return is_basic_string_wchar(type);
+}
+
+/**
+ * Returns true if the type is basic_string_view<wchar_t>.  This is the standard
+ * C++ wide string class.
+ */
+bool TypeManager::
+is_basic_string_view_wchar(CPPType *type) {
+  CPPType *string_view_type = get_basic_string_view_wchar_type();
+  if (string_view_type != nullptr &&
+      string_view_type->get_local_name(&parser) == type->get_local_name(&parser)) {
+    return true;
+  }
+
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_const:
+    return is_basic_string_view_wchar(type->as_const_type()->_wrapped_around);
+
+  case CPPDeclaration::ST_typedef:
+    return is_basic_string_view_wchar(type->as_typedef_type()->_type);
+
+  default:
+    break;
+  }
+
+  return false;
+}
+
+/**
+ * Returns true if the indicated type is a const wrapper around
+ * basic_string_view<wchar_t>.
+ */
+bool TypeManager::
+is_const_basic_string_view_wchar(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_const:
+    return is_basic_string_view_wchar(type->as_const_type()->_wrapped_around);
+
+  case CPPDeclaration::ST_typedef:
+    return is_const_basic_string_view_wchar(type->as_typedef_type()->_type);
+
+  default:
+    return false;
+  }
+}
+
+/**
+ * Returns true if the indicated type is a const reference to
+ * basic_string_view<wchar_t>.
+ */
+bool TypeManager::
+is_const_ref_to_basic_string_view_wchar(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_reference:
+    return is_const_basic_string_view_wchar(type->as_reference_type()->_pointing_at);
+
+  case CPPDeclaration::ST_typedef:
+    return is_const_ref_to_basic_string_view_wchar(type->as_typedef_type()->_type);
+
+  default:
+    return false;
+  }
+}
+
+/**
+ * Returns true if the indicated type is a const pointer to
+ * basic_string_view<wchar_t>.
+ */
+bool TypeManager::
+is_const_ptr_to_basic_string_view_wchar(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_pointer:
+    return is_const_basic_string_view_wchar(type->as_pointer_type()->_pointing_at);
+
+  case CPPDeclaration::ST_typedef:
+    return is_const_ptr_to_basic_string_view_wchar(type->as_typedef_type()->_type);
+
+  default:
+    return false;
+  }
+}
+
+/**
+ * Returns true if the type is basic_string_view<wchar_t>, or a const reference to
+ * it.
+ */
+bool TypeManager::
+is_wstring_view(CPPType *type) {
+  switch (type->get_subtype()) {
+  case CPPDeclaration::ST_reference:
+    return is_const_basic_string_view_wchar(type->as_reference_type()->_pointing_at);
+
+  case CPPDeclaration::ST_typedef:
+    return is_wstring_view(type->as_typedef_type()->_type);
+
+  default:
+    break;
+  }
+
+  return is_basic_string_view_wchar(type);
 }
 
 /**
@@ -2299,6 +2499,36 @@ get_basic_string_wchar_type() {
   static CPPType *type = nullptr;
   if (!got_type) {
     type = parser.parse_type("std::basic_string<wchar_t>");
+    got_type = true;
+  }
+  return type;
+}
+
+/**
+ * Returns a CPPType that represents basic_string<char>, or NULL if the type
+ * is unknown.
+ */
+CPPType *TypeManager::
+get_basic_string_view_char_type() {
+  static bool got_type = false;
+  static CPPType *type = nullptr;
+  if (!got_type) {
+    type = parser.parse_type("std::basic_string_view<char>");
+    got_type = true;
+  }
+  return type;
+}
+
+/**
+ * Returns a CPPType that represents basic_string_view<wchar_t>, or NULL if the
+ * type is unknown.
+ */
+CPPType *TypeManager::
+get_basic_string_view_wchar_type() {
+  static bool got_type = false;
+  static CPPType *type = nullptr;
+  if (!got_type) {
+    type = parser.parse_type("std::basic_string_view<wchar_t>");
     got_type = true;
   }
   return type;

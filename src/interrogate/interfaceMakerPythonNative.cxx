@@ -4861,16 +4861,20 @@ int get_type_sort(CPPType *type) {
 
   // The highest numbered one will be checked first.
   if (TypeManager::is_nullptr(type)) {
-    return 15;
+    return 17;
   } else if (TypeManager::is_pointer_to_Py_buffer(type)) {
-    return 14;
+    return 16;
   } else if (TypeManager::is_pointer_to_PyTypeObject(type)) {
-    return 13;
+    return 15;
   } else if (TypeManager::is_pointer_to_PyObject(type)) {
-    return 12;
+    return 14;
+  } else if (TypeManager::is_wstring_view(type)) {
+    return 13;
   } else if (TypeManager::is_wstring(type)) {
-    return 11;
+    return 12;
   } else if (TypeManager::is_wchar_pointer(type)) {
+    return 11;
+  } else if (TypeManager::is_string_view(type)) {
     return 10;
   } else if (TypeManager::is_string(type)) {
     return 9;
@@ -5523,7 +5527,9 @@ write_function_instance(ostream &out, FunctionRemap *remap,
         expected_params += "unicode";
 
       } else if (TypeManager::is_wstring(orig_type) ||
-                 TypeManager::is_const_ptr_to_basic_string_wchar(orig_type)) {
+                 TypeManager::is_wstring_view(orig_type) ||
+                 TypeManager::is_const_ptr_to_basic_string_wchar(orig_type) ||
+                 TypeManager::is_const_ptr_to_basic_string_view_wchar(orig_type)) {
         out << "#if PY_VERSION_HEX >= 0x03020000\n";
         indent(out, indent_level) << "PyObject *" << param_name << null_assign << ";\n";
         out << "#else\n";
@@ -5535,8 +5541,16 @@ write_function_instance(ostream &out, FunctionRemap *remap,
         if (is_optional) {
           extra_convert
             << "Py_ssize_t " << param_name << "_len;\n"
-            << "wchar_t *" << param_name << "_str = nullptr;\n"
-            << "std::wstring " << param_name << "_wstr;\n"
+            << "wchar_t *" << param_name << "_str = nullptr;\n";
+
+          if (TypeManager::is_wstring_view(orig_type) ||
+              TypeManager::is_const_ptr_to_basic_string_view_wchar(orig_type)) {
+            extra_convert << "std::wstring_view " << param_name << "_wstr;\n";
+          } else {
+            extra_convert << "std::wstring " << param_name << "_wstr;\n";
+          }
+
+          extra_convert
             << "if (" << param_name << " != nullptr) {\n"
             << "#if PY_VERSION_HEX >= 0x03030000\n"
             << "  " << param_name << "_str = PyUnicode_AsWideCharString("
@@ -5545,8 +5559,16 @@ write_function_instance(ostream &out, FunctionRemap *remap,
             << "  " << param_name << "_len = PyUnicode_GET_SIZE(" << param_name << ");\n"
             << "  " << param_name << "_str = (wchar_t *)alloca(sizeof(wchar_t) * (" + param_name + "_len + 1));\n"
             << "PyUnicode_AsWideChar(" << param_name << ", " << param_name << "_str, " << param_name << "_len);\n"
-            << "#endif\n"
-            << "  " << param_name << "_wstr.assign(" << param_name << "_str, " << param_name << "_len);\n"
+            << "#endif\n";
+
+          if (TypeManager::is_wstring_view(orig_type) ||
+              TypeManager::is_const_ptr_to_basic_string_view_wchar(orig_type)) {
+            extra_convert << "  " << param_name << "_wstr = std::wstring_view(" << param_name << "_str, " << param_name << "_len);\n";
+          } else {
+            extra_convert << "  " << param_name << "_wstr.assign(" << param_name << "_str, " << param_name << "_len);\n";
+          }
+
+          extra_convert
             << "} else {\n"
             << "  " << param_name << "_wstr" << default_expr << ";\n"
             << "}\n";
@@ -8374,6 +8396,10 @@ is_cpp_type_legal(CPPType *in_ctype) {
     return true;
   } else if (TypeManager::is_basic_string_wchar(type)) {
     return true;
+  } else if (TypeManager::is_basic_string_view_char(type)) {
+    return true;
+  } else if (TypeManager::is_basic_string_view_wchar(type)) {
+    return true;
   } else if (TypeManager::is_vector_unsigned_char(in_ctype)) {
     return true;
   } else if (TypeManager::is_simple(type)) {
@@ -8890,6 +8916,7 @@ NeedsAReprFunction(const InterrogateType &itype_class) {
                 if (TypeManager::is_pointer_to_ostream(inst1->_type)) {
                   inst1 = cppfunc->_parameters->_parameters[1];
                   if (TypeManager::is_string(inst1->_type) ||
+                      TypeManager::is_string_view(inst1->_type) ||
                       TypeManager::is_char_pointer(inst1->_type)) {
                     // python_repr(ostream, string)
                     if ((cppinst->_storage_class & CPPInstance::SC_extension) != 0) {

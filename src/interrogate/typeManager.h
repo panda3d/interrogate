@@ -77,6 +77,11 @@ public:
   static bool is_const_ref_to_basic_string_char(CPPType *type);
   static bool is_const_ptr_to_basic_string_char(CPPType *type);
   static bool is_string(CPPType *type);
+  static bool is_basic_string_view_char(CPPType *type);
+  static bool is_const_basic_string_view_char(CPPType *type);
+  static bool is_const_ref_to_basic_string_view_char(CPPType *type);
+  static bool is_const_ptr_to_basic_string_view_char(CPPType *type);
+  static bool is_string_view(CPPType *type);
   static bool is_wchar(CPPType *type);
   static bool is_wchar_pointer(CPPType *type);
   static bool is_basic_string_wchar(CPPType *type);
@@ -84,6 +89,11 @@ public:
   static bool is_const_ref_to_basic_string_wchar(CPPType *type);
   static bool is_const_ptr_to_basic_string_wchar(CPPType *type);
   static bool is_wstring(CPPType *type);
+  static bool is_basic_string_view_wchar(CPPType *type);
+  static bool is_const_basic_string_view_wchar(CPPType *type);
+  static bool is_const_ref_to_basic_string_view_wchar(CPPType *type);
+  static bool is_const_ptr_to_basic_string_view_wchar(CPPType *type);
+  static bool is_wstring_view(CPPType *type);
   static bool is_vector_unsigned_char(CPPType *type);
   static bool is_const_vector_unsigned_char(CPPType *type);
   static bool is_pair(CPPType *type);
@@ -139,6 +149,8 @@ public:
 
   static CPPType *get_basic_string_char_type();
   static CPPType *get_basic_string_wchar_type();
+  static CPPType *get_basic_string_view_char_type();
+  static CPPType *get_basic_string_view_wchar_type();
   static CPPType *get_reference_count_type();
   static CPPType *get_void_type();
   static CPPType *get_int_type();
