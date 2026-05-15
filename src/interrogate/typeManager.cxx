@@ -2342,7 +2342,7 @@ get_template_parameter_type(CPPType *source_type, int i) {
     return get_template_parameter_type(source_type->as_reference_type()->_pointing_at, i);
 
   case CPPDeclaration::ST_typedef:
-    return get_template_parameter_type(source_type->as_typedef_type()->_type);
+    return get_template_parameter_type(source_type->as_typedef_type()->_type, i);
 
   default:
     break;
