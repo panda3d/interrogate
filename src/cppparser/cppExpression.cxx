@@ -1397,17 +1397,24 @@ is_fully_specified() const {
   case T_const_cast:
   case T_reinterpret_cast:
   case T_construct:
-  case T_aggregate_init:
   case T_new:
     return (_u._typecast._to->is_fully_specified() &&
             _u._typecast._op1->is_fully_specified());
 
+  case T_aggregate_init:
+    return ((_u._typecast._to == nullptr ||
+             _u._typecast._to->is_fully_specified()) &&
+            _u._typecast._op1->is_fully_specified());
+
   case T_default_construct:
-  case T_empty_aggregate_init:
   case T_default_new:
   case T_sizeof_type:
   case T_alignof:
     return _u._typecast._to->is_fully_specified();
+
+  case T_empty_aggregate_init:
+    return _u._typecast._to == nullptr ||
+           _u._typecast._to->is_fully_specified();
 
   case T_sizeof_expr:
     return _u._typecast._op1->is_fully_specified();
@@ -1548,10 +1555,12 @@ substitute_decl(CPPDeclaration::SubstDecl &subst,
   case T_default_new:
   case T_sizeof_type:
   case T_alignof:
-    rep->_u._typecast._to =
-      _u._typecast._to->substitute_decl(subst, current_scope, global_scope)
-      ->as_type();
-    any_changed = any_changed || (rep->_u._typecast._to != _u._typecast._to);
+    if (_u._typecast._to != nullptr) {
+      rep->_u._typecast._to =
+        _u._typecast._to->substitute_decl(subst, current_scope, global_scope)
+        ->as_type();
+      any_changed = any_changed || (rep->_u._typecast._to != _u._typecast._to);
+    }
     break;
 
   case T_sizeof_expr:
@@ -1640,14 +1649,16 @@ is_tbd() const {
   case T_unknown_ident:
     return true;
 
+  case T_aggregate_init:
+  case T_empty_aggregate_init:
+    return _u._typecast._to != nullptr && _u._typecast._to->is_tbd();
+
   case T_typecast:
   case T_static_cast:
   case T_dynamic_cast:
   case T_const_cast:
   case T_reinterpret_cast:
   case T_construct:
-  case T_aggregate_init:
-  case T_empty_aggregate_init:
   case T_new:
   case T_default_construct:
   case T_default_new:
@@ -1869,14 +1880,18 @@ output(std::ostream &out, int indent_level, CPPScope *scope, bool) const {
     break;
 
   case T_aggregate_init:
-    _u._typecast._to->output(out, indent_level, scope, false);
+    if (_u._typecast._to != nullptr) {
+      _u._typecast._to->output(out, indent_level, scope, false);
+    }
     out << "{";
     _u._typecast._op1->output(out, indent_level, scope, false);
     out << "}";
     break;
 
   case T_empty_aggregate_init:
-    _u._typecast._to->output(out, indent_level, scope, false);
+    if (_u._typecast._to != nullptr) {
+      _u._typecast._to->output(out, indent_level, scope, false);
+    }
     out << "{}";
     break;
 

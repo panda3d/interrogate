@@ -393,6 +393,9 @@ pop_struct() {
 %type <u.expr> maybe_initialize
 %type <u.expr> maybe_initialize_or_constructor_body
 %type <u.expr> maybe_initialize_or_function_body
+%type <u.expr> brace_init_list
+%type <u.expr> brace_init_items
+%type <u.expr> brace_init_clause
 %type <u.instance> function_parameter
 %type <u.instance> formal_parameter
 %type <u.inst_ident> not_paren_formal_parameter_identifier
@@ -512,7 +515,7 @@ constructor_init:
 {
   delete $3;
 }
-        | name '{' optional_const_expr_comma '}'
+        | name '{' brace_init_list '}'
 {
   delete $3;
 }
@@ -2249,6 +2252,49 @@ maybe_initialize:
 {
   $$ = $2;
 }
+        | '=' '{' brace_init_list '}'
+{
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(nullptr, $3));
+}
+        ;
+
+/* A braced-init-list: { } or { clause, clause, ... } with optional trailing comma.
+   Each clause is either an expression or a nested braced-init-list. */
+brace_init_list:
+        empty
+{
+  $$ = nullptr;
+}
+        | brace_init_items
+{
+  $$ = $1;
+}
+        | brace_init_items ','
+{
+  $$ = $1;
+}
+        ;
+
+brace_init_items:
+        brace_init_clause
+{
+  $$ = $1;
+}
+        | brace_init_items ',' brace_init_clause
+{
+  $$ = new CPPExpression(',', $1, $3);
+}
+        ;
+
+brace_init_clause:
+        const_expr
+{
+  $$ = $1;
+}
+        | '{' brace_init_list '}'
+{
+  $$ = new CPPExpression(CPPExpression::aggregate_init_op(nullptr, $2));
+}
         ;
 
 maybe_initialize_or_constructor_body:
@@ -2303,25 +2349,10 @@ maybe_initialize_or_function_body:
 {
   $$ = new CPPExpression(CPPExpression::get_delete());
 }
-        | '=' '{' structure_init '}'
+        | '=' '{' brace_init_list '}'
 {
   $$ = nullptr;
 }
-        ;
-
-structure_init:
-        empty
-        | structure_init_body
-        | structure_init_body ','
-        ;
-
-structure_init_body:
-        const_expr
-{
-}
-        | '{' structure_init '}'
-        | structure_init_body ',' const_expr
-        | structure_init_body ',' '{' structure_init '}'
         ;
 
 optional_this:
@@ -3750,7 +3781,7 @@ const_expr:
   assert(type != nullptr);
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | TYPENAME_IDENTIFIER '{' optional_const_expr_comma '}'
+        | TYPENAME_IDENTIFIER '{' brace_init_list '}'
 {
   // Aggregate initialization.
   CPPType *type = $1->find_type(current_scope, global_scope, false, current_lexer);
@@ -3766,7 +3797,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_AUTO '{' optional_const_expr_comma '}'
+        | KW_AUTO '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_auto));
@@ -3778,7 +3809,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_INT '{' optional_const_expr_comma '}'
+        | KW_INT '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int));
@@ -3790,7 +3821,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_CHAR '{' optional_const_expr_comma '}'
+        | KW_CHAR '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char));
@@ -3802,7 +3833,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_wchar_t));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_WCHAR_T '{' optional_const_expr_comma '}'
+        | KW_WCHAR_T '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_wchar_t));
@@ -3814,7 +3845,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char8_t));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_CHAR8_T '{' optional_const_expr_comma '}'
+        | KW_CHAR8_T '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char8_t));
@@ -3826,7 +3857,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char16_t));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_CHAR16_T '{' optional_const_expr_comma '}'
+        | KW_CHAR16_T '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char16_t));
@@ -3838,7 +3869,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char32_t));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_CHAR32_T '{' optional_const_expr_comma '}'
+        | KW_CHAR32_T '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_char32_t));
@@ -3850,7 +3881,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_bool));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_BOOL '{' optional_const_expr_comma '}'
+        | KW_BOOL '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_bool));
@@ -3863,7 +3894,7 @@ const_expr:
                                         CPPSimpleType::F_short));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_SHORT '{' optional_const_expr_comma '}'
+        | KW_SHORT '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
@@ -3877,7 +3908,7 @@ const_expr:
                                         CPPSimpleType::F_long));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_LONG '{' optional_const_expr_comma '}'
+        | KW_LONG '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
@@ -3891,7 +3922,7 @@ const_expr:
                                         CPPSimpleType::F_unsigned));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_UNSIGNED '{' optional_const_expr_comma '}'
+        | KW_UNSIGNED '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
@@ -3905,7 +3936,7 @@ const_expr:
                                         CPPSimpleType::F_signed));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_SIGNED '{' optional_const_expr_comma '}'
+        | KW_SIGNED '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_int,
@@ -3918,7 +3949,7 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_float));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_FLOAT '{' optional_const_expr_comma '}'
+        | KW_FLOAT '{' brace_init_list '}'
 {
   CPPType *type =
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_float));
@@ -3930,10 +3961,10 @@ const_expr:
     CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_double));
   $$ = new CPPExpression(CPPExpression::construct_op(type, $3));
 }
-        | KW_DOUBLE '{' optional_const_expr_comma '}'
+        | KW_DOUBLE '{' brace_init_list '}'
 {
   CPPType *type =
-    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_float));
+    CPPType::new_type(new CPPSimpleType(CPPSimpleType::T_double));
   $$ = new CPPExpression(CPPExpression::aggregate_init_op(type, $3));
 }
         | KW_SIZEOF '(' full_type ')' %prec UNARY
