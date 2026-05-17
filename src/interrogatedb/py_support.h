@@ -27,8 +27,6 @@
 #define FASTCALL_OR_VARARGS_KEYWORDS_ARGS PyObject *args, PyObject *kwds
 #endif
 
-using namespace std;
-
 // This is now simply a forward declaration.  The actual definition is created
 // by the code generator.
 #define Define_Dtool_Class(MODULE_NAME, CLASS_NAME, PUBLIC_NAME) \
