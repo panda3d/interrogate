@@ -1164,7 +1164,8 @@ write_class_details(ostream &out, Object *obj) {
           }
           params[i]->_type->output_instance(out, remap->get_parameter_name(i), &parser);
           if (i > 0 && params[i]->_initializer != nullptr) {
-            out << " = " << *params[i]->_initializer;
+            out << " = ";
+            params[i]->_initializer->output(out, 0, &parser, false);
           }
         }
         out << ")";
